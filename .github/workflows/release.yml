@@ -29,14 +29,9 @@ jobs:
           generate_release_notes: true
 
   build-musl:
-    name: Build ${{ matrix.target }}
+    name: Build x86_64-unknown-linux-musl
     needs: create-release
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target:
-          - x86_64-unknown-linux-musl
-          - aarch64-unknown-linux-musl
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +39,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Add musl target
-        run: rustup target add ${{ matrix.target }}
+        run: rustup target add x86_64-unknown-linux-musl
 
       - name: Install zig
         uses: goto-bus-stop/setup-zig@v2
@@ -54,29 +49,19 @@ jobs:
       - name: Install zigbuild
         run: cargo install cargo-zigbuild
 
-      - name: Install cross-compile tools
-        if: matrix.target == 'aarch64-unknown-linux-musl'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
-
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo zigbuild --release --target ${{ matrix.target }}
+        run: cargo zigbuild --release --target x86_64-unknown-linux-musl
 
       - name: Strip & Prepare
         run: |
-          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-musl" ]; then
-            strip target/${{ matrix.target }}/release/createrepo_rs
-          else
-            aarch64-linux-gnu-strip target/${{ matrix.target }}/release/createrepo_rs
-          fi
-          cp target/${{ matrix.target }}/release/createrepo_rs createrepo_rs-${{ matrix.target }}
+          strip target/x86_64-unknown-linux-musl/release/createrepo_rs
+          cp target/x86_64-unknown-linux-musl/release/createrepo_rs createrepo_rs-x86_64-unknown-linux-musl
 
       - name: Upload
         uses: softprops/action-gh-release@v2
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          files: createrepo_rs-${{ matrix.target }}
+          files: createrepo_rs-x86_64-unknown-linux-musl

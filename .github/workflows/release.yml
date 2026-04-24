@@ -54,6 +54,12 @@ jobs:
       - name: Install zigbuild
         run: cargo install cargo-zigbuild
 
+      - name: Install cross-compile tools
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
@@ -62,7 +68,11 @@ jobs:
 
       - name: Strip & Prepare
         run: |
-          strip target/${{ matrix.target }}/release/createrepo_rs
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-musl" ]; then
+            strip target/${{ matrix.target }}/release/createrepo_rs
+          else
+            aarch64-linux-gnu-strip target/${{ matrix.target }}/release/createrepo_rs
+          fi
           cp target/${{ matrix.target }}/release/createrepo_rs createrepo_rs-${{ matrix.target }}
 
       - name: Upload

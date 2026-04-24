@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -50,9 +50,44 @@ fn main() -> ExitCode {
     log!(&cli, LogLevel::Normal, "Repository path: {}", repo_path.display());
     log!(&cli, LogLevel::Normal, "Output path: {}", output_dir.display());
 
+    // Cache of packages from existing repodata, keyed by location_href.
+    // Populated only when --update is set and we can read the source repodata.
+    let mut update_cache: HashMap<String, createrepo_rs::types::Package> = HashMap::new();
     if cli.update {
-        log!(&cli, LogLevel::Warning, "Warning: --update mode is not yet fully implemented");
-        log!(&cli, LogLevel::Warning, "         All packages will be reprocessed");
+        let cache_source = cli
+            .update_md_path
+            .clone()
+            .unwrap_or_else(|| output_dir.join("repodata"));
+        if cache_source.exists() {
+            match createrepo_rs::xml::parse::load_cached_packages(&cache_source) {
+                Ok(map) => {
+                    log!(
+                        &cli,
+                        LogLevel::Normal,
+                        "Update mode: loaded {} cached packages from {}",
+                        map.len(),
+                        cache_source.display()
+                    );
+                    update_cache = map;
+                }
+                Err(e) => {
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: --update could not read existing repodata at {}: {} — all packages will be reprocessed",
+                        cache_source.display(),
+                        e
+                    );
+                }
+            }
+        } else {
+            log!(
+                &cli,
+                LogLevel::Warning,
+                "Warning: --update specified but no existing repodata found at {} — all packages will be reprocessed",
+                cache_source.display()
+            );
+        }
     }
 
     if cli.simple_md_filenames {
@@ -203,6 +238,42 @@ fn main() -> ExitCode {
         s.parse::<usize>().ok()
     });
 
+    // In --update mode, partition discovered RPMs into cache hits (reuse stored
+    // metadata) vs. misses (must re-read the RPM).
+    let mut to_process: Vec<PathBuf> = Vec::with_capacity(rpm_files.len());
+    let mut cache_hits = 0usize;
+    if !update_cache.is_empty() {
+        for rpm_path in &rpm_files {
+            if let Some(cached) = lookup_cached(&update_cache, rpm_path, repo_path, cli.skip_stat)
+            {
+                let mut pkg = cached.clone();
+                if let Some(limit) = changelog_limit {
+                    pkg.changelogs.truncate(limit);
+                }
+                if let Some(ref db) = db {
+                    if let Err(e) = db.insert_package(&pkg) {
+                        log!(&cli, LogLevel::Warning, "Warning: Failed to insert cached package {}: {}", pkg.name, e);
+                    }
+                }
+                packages.push(pkg);
+                cache_hits += 1;
+            } else {
+                to_process.push(rpm_path.clone());
+            }
+        }
+        log!(
+            &cli,
+            LogLevel::Normal,
+            "Update mode: {} cached, {} to process",
+            cache_hits,
+            to_process.len()
+        );
+    } else {
+        to_process.extend(rpm_files.iter().cloned());
+    }
+
+    let rpm_files = to_process;
+
     if num_workers == 1 {
         for rpm_path in &rpm_files {
             if INTERRUPTED.load(Ordering::SeqCst) {
@@ -240,6 +311,8 @@ fn main() -> ExitCode {
                 }
             }
         }
+    } else if rpm_files.is_empty() {
+        // All packages came from the update cache; nothing for the pool to do.
     } else {
         let (mut pool, receiver) = createrepo_rs::pool::WorkerPool::new(num_workers);
 
@@ -815,6 +888,47 @@ fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBu
         header_start: None,
         header_end: None,
     }
+}
+
+/// Look up a discovered RPM in the cached metadata loaded by `--update`.
+///
+/// Returns `Some(cached_pkg)` when the cache contains an entry for this RPM
+/// and (unless `skip_stat` is set) the on-disk file size and mtime still
+/// match the cached values. Returns `None` on any miss so the caller falls
+/// back to fully re-reading the RPM.
+fn lookup_cached<'a>(
+    cache: &'a HashMap<String, createrepo_rs::types::Package>,
+    rpm_path: &Path,
+    repo_path: &Path,
+    skip_stat: bool,
+) -> Option<&'a createrepo_rs::types::Package> {
+    let mut keys: Vec<String> = Vec::new();
+    if let Some(name) = rpm_path.file_name() {
+        keys.push(name.to_string_lossy().into_owned());
+    }
+    if let Ok(rel) = rpm_path.strip_prefix(repo_path) {
+        keys.push(rel.to_string_lossy().into_owned());
+    }
+
+    let cached = keys.iter().find_map(|k| cache.get(k))?;
+
+    if skip_stat {
+        return Some(cached);
+    }
+
+    let meta = std::fs::metadata(rpm_path).ok()?;
+    if meta.len() as i64 != cached.size_package {
+        return None;
+    }
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64)?;
+    if mtime != cached.time_file {
+        return None;
+    }
+    Some(cached)
 }
 
 fn cut_directory_components(path: &str, count: usize) -> String {

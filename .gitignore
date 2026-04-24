@@ -16,3 +16,6 @@
 
 # Docker test files
 **/repodata/
+
+# oh-my-claudecode workspace
+.omc/

@@ -61,8 +61,7 @@ pub fn parse_repomd(xml_data: &[u8]) -> Result<Vec<RepomdRecord>, String> {
                     }
                 }
             }
-            Ok(Event::Text(e)) => {
-                if in_data {
+            Ok(Event::Text(e)) if in_data => {
                     let text = String::from_utf8_lossy(&e).to_string();
                     match current_element.as_str() {
                         "checksum" => current_record.checksum = Some(text),
@@ -71,7 +70,6 @@ pub fn parse_repomd(xml_data: &[u8]) -> Result<Vec<RepomdRecord>, String> {
                         "open-size" => current_record.open_size = text.parse().ok(),
                         "open-checksum" => current_record.open_checksum = Some(text),
                         _ => {}
-                    }
                 }
             }
             Ok(Event::End(e)) => {

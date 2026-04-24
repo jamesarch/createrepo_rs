@@ -42,6 +42,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Add musl target
+        run: rustup target add x86_64-unknown-linux-musl
+
       - name: Install zig
         uses: goto-bus-stop/setup-zig@v2
         with:

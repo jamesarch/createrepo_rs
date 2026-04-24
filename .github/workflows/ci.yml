@@ -34,24 +34,25 @@ jobs:
         run: cargo test --bin createrepo_rs --release
 
   linux-static:
-    name: Linux Static Binary (musl)
+    name: Linux Static Binary (x86_64 musl)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install musl toolchain
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl
+
+      - name: Install zigbuild
+        run: cargo install cargo-zigbuild
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
       - name: Build static binary
-        run: cargo build --release --target x86_64-unknown-linux-musl
+        run: cargo zigbuild --release --target x86_64-unknown-linux-musl
+
+      - name: Strip
+        run: strip target/x86_64-unknown-linux-musl/release/createrepo_rs
 
       - name: Upload binary
         uses: actions/upload-artifact@v4

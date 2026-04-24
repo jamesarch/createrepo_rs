@@ -37,19 +37,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install musl toolchain
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install zigbuild
+        run: cargo install cargo-zigbuild
+
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo zigbuild --release --target ${{ matrix.target }}
 
       - name: Strip & Prepare
         run: |

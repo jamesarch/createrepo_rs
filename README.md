@@ -73,6 +73,9 @@ Notable:
 | Flag | Description |
 |------|-------------|
 | `--workers=N` | Parallel RPM parsing threads |
+| `--update` | Reuse cached metadata for unchanged RPMs (size+mtime check) |
+| `--update-md-path=PATH` | Source repodata for `--update` (defaults to output dir) |
+| `--skip-stat` | With `--update`, match by location only (skip size/mtime check) |
 | `--compress-type=zstd` | Compression algorithm |
 | `--checksum=sha512` | Hash algorithm for metadata |
 | `--revision=12345` | Custom repository revision |

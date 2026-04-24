@@ -109,7 +109,9 @@ pub struct Cli {
     #[arg(long)]
     pub no_database: bool,
 
-    /// Don't update existing repodata (only create if missing).
+    /// Reuse existing repodata: skip RPMs whose location, size, and mtime
+    /// still match the cached metadata. Use --skip-stat to match by
+    /// location alone, or --update-md-path to read from a different repo.
     #[arg(long)]
     pub update: bool,
 

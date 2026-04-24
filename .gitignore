@@ -19,3 +19,6 @@
 
 # oh-my-claudecode workspace
 .omc/
+
+# Claude Code settings
+.claude/

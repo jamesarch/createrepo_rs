@@ -169,10 +169,6 @@ pub struct Cli {
     #[arg(long)]
     pub skip_stat: bool,
 
-    /// Run in split media mode.
-    #[arg(long)]
-    pub split: bool,
-
     /// Specify a text file with list of files to include.
     #[arg(long, value_hint = ValueHint::FilePath)]
     pub pkglist: Option<PathBuf>,
@@ -208,14 +204,6 @@ pub struct Cli {
     /// Compression type for all XML files (separate from --compress-type).
     #[arg(long)]
     pub general_compress_type: Option<String>,
-
-    /// Generate zchunk files.
-    #[arg(long)]
-    pub zck: bool,
-
-    /// Directory with zchunk compression dictionaries.
-    #[arg(long, value_hint = ValueHint::DirPath)]
-    pub zck_dict_dir: Option<PathBuf>,
 
     /// Keep additional metadata during update (default).
     #[arg(long)]
@@ -309,11 +297,6 @@ impl Cli {
 
     pub fn repo_tags(&self) -> Vec<String> {
         self.repo_tag.clone()
-    }
-
-    /// Returns true if any feature that requires zchunk compression is enabled.
-    pub fn needs_zchunk(&self) -> bool {
-        self.zck || self.zck_dict_dir.is_some()
     }
 
     /// Returns true if simple_md_filenames is set (no checksum in filenames).

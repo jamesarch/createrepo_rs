@@ -50,27 +50,6 @@ fn main() -> ExitCode {
     log!(&cli, LogLevel::Normal, "Repository path: {}", repo_path.display());
     log!(&cli, LogLevel::Normal, "Output path: {}", output_dir.display());
 
-    // Handle unimplemented arguments
-    if cli.split {
-        log!(&cli, LogLevel::Error, "Error: --split is not yet implemented");
-        return ExitCode::from(1);
-    }
-
-    if cli.needs_zchunk() {
-        if cli.zck {
-            log!(&cli, LogLevel::Error, "Error: --zck is not yet implemented (zchunk library not available)");
-            return ExitCode::from(1);
-        }
-        if cli.zck_dict_dir.is_some() {
-            log!(&cli, LogLevel::Error, "Error: --zck-dict-dir is not yet implemented");
-            return ExitCode::from(1);
-        }
-    }
-
-    if cli.update_md_path.is_some() {
-        log!(&cli, LogLevel::Warning, "Warning: --update-md-path is not yet fully implemented");
-    }
-
     if cli.update {
         log!(&cli, LogLevel::Warning, "Warning: --update mode is not yet fully implemented");
         log!(&cli, LogLevel::Warning, "         All packages will be reprocessed");

@@ -24,7 +24,12 @@ Drop-in replacement for the C version with **identical output, zero FFI, and 3.5
 
 ```bash
 # Install
-cargo install createrepo_rs
+cargo install --git https://github.com/jamesarch/createrepo_rs createrepo_rs
+
+# Or clone and build
+git clone https://github.com/jamesarch/createrepo_rs
+cd createrepo_rs
+cargo build --release
 
 # Generate metadata for a directory of RPMs
 createrepo_rs /path/to/rpms/

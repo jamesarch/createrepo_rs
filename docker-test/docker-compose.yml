@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  repo-server:
+    image: nginx:alpine
+    container_name: createrepo_repo
+    ports:
+      - "8080:80"
+    volumes:
+      - ./repo:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  client:
+    image: fedora:39
+    container_name: createrepo_client
+    tty: true
+    stdin_open: true
+    depends_on:
+      - repo-server
+    volumes:
+      - ./repo:/repo:ro
+      - ./test.sh:/test.sh:ro
+    command: bash /test.sh

@@ -1,0 +1,47 @@
+[package]
+name = "createrepo_rs"
+version = "1.2.3"
+edition = "2021"
+authors = ["RPM Software Management Team"]
+description = "🦀 Pure Rust implementation of createrepo_c — generates RPM repository metadata (repodata). Drop-in replacement with identical output, zero FFI."
+license = "GPL-2.0-or-later"
+repository = "https://github.com/rpm-software-management/createrepo_rs"
+homepage = "https://github.com/rpm-software-management/createrepo_rs"
+documentation = "https://docs.rs/createrepo_rs"
+readme = "README.md"
+keywords = ["rpm", "createrepo", "repodata", "repository", "yum", "dnf"]
+categories = ["command-line-utilities", "development-tools::build-utils"]
+rust-version = "1.70"
+
+[dependencies]
+flate2 = "1.0"
+bzip2 = "0.4"
+zstd = "0.13"
+xz2 = "0.1"
+anyhow = "1.0"
+quick-xml = "0.37"
+rusqlite = { version = "0.32", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+glob = "0.3"
+crossbeam-channel = "0.5"
+thiserror = "1"
+num_cpus = "1"
+rpm = "0.14"
+sha2 = "0.10"
+ctrlc = "3"
+
+[lib]
+name = "createrepo_rs"
+path = "lib.rs"
+
+[[bin]]
+name = "createrepo_rs"
+path = "src/main.rs"
+
+[profile.release]
+lto = false
+opt-level = 2
+
+[lints.rust]
+non_camel_case_types = "allow"

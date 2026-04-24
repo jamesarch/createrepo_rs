@@ -151,11 +151,18 @@ impl RpmReader {
         let time_build = metadata.get_build_time()
             .map(|t| t as i64)
             .unwrap_or(0);
-        let time_file = time_build;
 
-        let file_size = std::fs::metadata(&self.path)
+        let file_meta = std::fs::metadata(&self.path).ok();
+        let file_size = file_meta
+            .as_ref()
             .map(|m| m.len() as i64)
             .unwrap_or(0);
+        let time_file = file_meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(time_build);
 
         let location = self.path
             .file_name()

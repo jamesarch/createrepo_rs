@@ -74,9 +74,8 @@ fn write_version_element<W: Write>(
     package: &Package,
 ) -> Result<(), XmlError> {
     let mut version_start = BytesStart::new("version");
-    if let Some(epoch) = package.epoch {
-        version_start.push_attribute(("epoch", epoch.to_string().as_str()));
-    }
+    let epoch_val = package.epoch.unwrap_or(0);
+    version_start.push_attribute(("epoch", epoch_val.to_string().as_str()));
     version_start.push_attribute(("ver", package.version.as_str()));
     version_start.push_attribute(("rel", package.release.as_str()));
     writer.write_event(Event::Empty(version_start))?;

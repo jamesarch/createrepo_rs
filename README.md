@@ -110,7 +110,7 @@ docker logs -f createrepo_client
 
 Output:
 ```
-✅✅✅ 成功！Rust createrepo_rs 生成的仓库被 dnf 正常识别并下载！
+✅✅✅ Success! createrepo_rs generated metadata recognized and downloaded by dnf!
 ```
 
 ## 🔨 Building

@@ -12,28 +12,8 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.release.outputs.upload_url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Release
-        id: release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          draft: true
-          body: |
-            ## Changes in ${{ github.ref_name }}
-
-            See [CHANGELOG](https://github.com/jamesarch/createrepo_rs/compare/${{ github.ref_name }}...main) for full commit history.
-
-  build-musl:
-    name: Build x86_64-unknown-linux-musl
-    needs: create-release
+  release:
+    name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +43,14 @@ jobs:
           strip target/x86_64-unknown-linux-musl/release/createrepo_rs
           cp target/x86_64-unknown-linux-musl/release/createrepo_rs createrepo_rs-x86_64-unknown-linux-musl
 
-      - name: Upload
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body: |
+            ## Changes in ${{ github.ref_name }}
+
+            See [commits](https://github.com/jamesarch/createrepo_rs/compare/${{ github.ref_name }}...main) for full history.
           files: createrepo_rs-x86_64-unknown-linux-musl

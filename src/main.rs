@@ -46,7 +46,7 @@ fn main() -> ExitCode {
     let repo_path = &cli.path;
     let output_dir = cli.outputdir.as_ref().unwrap_or(repo_path);
 
-    log!(&cli, LogLevel::Normal, "createrepo_c version 1.2.3");
+    log!(&cli, LogLevel::Normal, "createrepo_rs v{}", env!("CARGO_PKG_VERSION"));
     log!(&cli, LogLevel::Normal, "Repository path: {}", repo_path.display());
     log!(&cli, LogLevel::Normal, "Output path: {}", output_dir.display());
 
@@ -244,8 +244,9 @@ fn main() -> ExitCode {
                             if let Some(ref db) = db {
                                 if let Err(e) = db.insert_package(&pkg) {
                                     log!(&cli, LogLevel::Warning, "Warning: Failed to insert package {}: {}", pkg.name, e);
-                                }
-                            }
+    }
+}
+
                             packages.push(pkg);
                         }
                         Err(e) => {
@@ -873,4 +874,36 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), std::io::Error> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_sha256() {
+        let result = compute_checksum(b"hello world", "sha256");
+        assert_eq!(result, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+    }
+
+    #[test]
+    fn test_compute_sha512() {
+        let result = compute_checksum(b"hello", "sha512");
+        assert_eq!(result.len(), 128);
+    }
+
+    #[test]
+    fn test_cut_directory_components() {
+        assert_eq!(cut_directory_components("a/b/c/d.rpm", 2), "c/d.rpm");
+        assert_eq!(cut_directory_components("a/b.rpm", 0), "a/b.rpm");
+        assert_eq!(cut_directory_components("a", 5), "");
+    }
+
+    #[test]
+    fn test_parse_age_duration() {
+        assert!(parse_age_duration("30d").is_some());
+        assert!(parse_age_duration("2h").is_some());
+        assert!(parse_age_duration("5m").is_some());
+        assert!(parse_age_duration("xyz").is_none());
+    }
 }

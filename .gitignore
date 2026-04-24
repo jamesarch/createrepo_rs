@@ -15,4 +15,4 @@
 .DS_Store
 
 # Docker test files
-docker-test/repo/repodata/
+**/repodata/

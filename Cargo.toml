@@ -1,8 +1,8 @@
 [package]
 name = "createrepo_rs"
-version = "1.2.3"
+version = "0.1.0"
 edition = "2021"
-authors = ["RPM Software Management Team"]
+authors = ["jamesarch"]
 description = "🦀 Pure Rust implementation of createrepo_c — generates RPM repository metadata (repodata). Drop-in replacement with identical output, zero FFI."
 license = "GPL-2.0-or-later"
 repository = "https://github.com/jamesarch/createrepo_rs"

@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
-[![CI](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![CI](https://github.com/jamesarch/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jamesarch/createrepo_rs/actions)
 
 **100% pure Rust implementation of `createrepo_c`** — generates RPM repository metadata (repodata).
 

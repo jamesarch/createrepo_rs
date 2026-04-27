@@ -15,10 +15,11 @@ pub fn dump_filelists_xml(
     filelists_ext: bool,
     pretty: bool,
 ) -> Result<Vec<u8>, XmlError> {
+    let estimated = packages.len() * 256;
     let mut writer = if pretty {
-        Writer::new_with_indent(Vec::new(), b' ', 2)
+        Writer::new_with_indent(Vec::with_capacity(estimated), b' ', 2)
     } else {
-        Writer::new(Vec::new())
+        Writer::new(Vec::with_capacity(estimated))
     };
 
     writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;

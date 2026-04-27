@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -400,7 +401,7 @@ pub fn parse_other_xml(xml: &[u8]) -> Result<HashMap<String, Vec<ChangelogEntry>
 ///
 /// Returns a map keyed by `location_href` so callers can look up cached
 /// metadata for an RPM by its repository path.
-pub fn load_cached_packages(repodata_dir: &Path) -> Result<HashMap<String, Package>, String> {
+pub fn load_cached_packages(repodata_dir: &Path) -> Result<HashMap<String, Arc<Package>>, String> {
     let repomd_path = repodata_dir.join("repomd.xml");
     let repomd_xml = std::fs::read(&repomd_path)
         .map_err(|e| format!("read {}: {}", repomd_path.display(), e))?;
@@ -457,7 +458,7 @@ pub fn load_cached_packages(repodata_dir: &Path) -> Result<HashMap<String, Packa
             .location_href
             .clone()
             .unwrap_or_else(|| pkg.location.clone());
-        by_location.insert(key, pkg);
+        by_location.insert(key, Arc::new(pkg));
     }
     Ok(by_location)
 }

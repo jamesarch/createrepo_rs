@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use createrepo_rs::cli::Cli;
@@ -71,7 +72,7 @@ fn main() -> ExitCode {
 
     // Cache of packages from existing repodata, keyed by location_href.
     // Populated only when --update is set and we can read the source repodata.
-    let mut update_cache: HashMap<String, createrepo_rs::types::Package> = HashMap::new();
+    let mut update_cache: HashMap<String, Arc<createrepo_rs::types::Package>> = HashMap::new();
     if cli.update {
         let cache_source = cli
             .update_md_path
@@ -330,7 +331,11 @@ fn main() -> ExitCode {
     } else {
         for rpm_path in &rpm_files {
             if let Some(cached) = lookup_cached(&update_cache, rpm_path, repo_path, cli.skip_stat) {
-                let mut pkg = cached.clone();
+                // Try to get owned Package without cloning (if refcount is 1)
+                let mut pkg = match Arc::try_unwrap(cached) {
+                    Ok(pkg) => pkg,
+                    Err(arc) => (*arc).clone(), // Clone only if multiple references exist
+                };
                 if let Some(limit) = changelog_limit {
                     pkg.changelogs.truncate(limit);
                 }
@@ -663,14 +668,11 @@ fn main() -> ExitCode {
         }
     };
     let primary_checksum = compute_checksum(&primary_compressed, repomd_checksum_type);
-    let primary_size = primary_path.metadata().map(|m| m.len() as i64).ok();
-    let primary_timestamp = primary_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| {
-            t.duration_since(UNIX_EPOCH)
-                .ok()
-                .map(|d| d.as_secs() as i64)
-        })
-    });
+    let primary_size = Some(primary_compressed.len() as i64);
+    let primary_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs() as i64);
 
     // Generate filelists.xml
     let filelists_xml = match dump::filelists::dump_filelists_xml(&packages, false, pretty) {
@@ -706,14 +708,11 @@ fn main() -> ExitCode {
             }
         };
     let filelists_checksum = compute_checksum(&filelists_compressed, repomd_checksum_type);
-    let filelists_size = filelists_path.metadata().map(|m| m.len() as i64).ok();
-    let filelists_timestamp = filelists_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| {
-            t.duration_since(UNIX_EPOCH)
-                .ok()
-                .map(|d| d.as_secs() as i64)
-        })
-    });
+    let filelists_size = Some(filelists_compressed.len() as i64);
+    let filelists_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs() as i64);
 
     // Generate other.xml
     let other_xml = match dump::other::dump_other_xml(&packages, pretty) {
@@ -743,14 +742,11 @@ fn main() -> ExitCode {
         }
     };
     let other_checksum = compute_checksum(&other_compressed, repomd_checksum_type);
-    let other_size = other_path.metadata().map(|m| m.len() as i64).ok();
-    let other_timestamp = other_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| {
-            t.duration_since(UNIX_EPOCH)
-                .ok()
-                .map(|d| d.as_secs() as i64)
-        })
-    });
+    let other_size = Some(other_compressed.len() as i64);
+    let other_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs() as i64);
 
     // Create repomd records
     let primary_record = RepomdRecord {
@@ -1107,12 +1103,12 @@ fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBu
 /// and (unless `skip_stat` is set) the on-disk file size and mtime still
 /// match the cached values. Returns `None` on any miss so the caller falls
 /// back to fully re-reading the RPM.
-fn lookup_cached<'a>(
-    cache: &'a HashMap<String, createrepo_rs::types::Package>,
+fn lookup_cached(
+    cache: &HashMap<String, Arc<createrepo_rs::types::Package>>,
     rpm_path: &Path,
     repo_path: &Path,
     skip_stat: bool,
-) -> Option<&'a createrepo_rs::types::Package> {
+) -> Option<Arc<createrepo_rs::types::Package>> {
     let mut keys: Vec<String> = Vec::new();
     if let Some(name) = rpm_path.file_name() {
         keys.push(name.to_string_lossy().into_owned());
@@ -1124,7 +1120,7 @@ fn lookup_cached<'a>(
     let cached = keys.iter().find_map(|k| cache.get(k))?;
 
     if skip_stat {
-        return Some(cached);
+        return Some(cached.clone());
     }
 
     let meta = std::fs::metadata(rpm_path).ok()?;
@@ -1139,7 +1135,7 @@ fn lookup_cached<'a>(
     if mtime != cached.time_file {
         return None;
     }
-    Some(cached)
+    Some(cached.clone())
 }
 
 fn cut_directory_components(path: &str, count: usize) -> String {

@@ -55,6 +55,29 @@ pub struct ChangelogEntry {
     pub content: String,
 }
 
+impl From<crate::rpm::DependencyInfo> for Dependency {
+    fn from(d: crate::rpm::DependencyInfo) -> Self {
+        Dependency {
+            name: d.name,
+            epoch: d.epoch,
+            version: d.version,
+            release: d.release,
+            flags: d.flags,
+            pre: d.pre,
+        }
+    }
+}
+
+impl From<crate::rpm::ChangelogInfo> for ChangelogEntry {
+    fn from(c: crate::rpm::ChangelogInfo) -> Self {
+        ChangelogEntry {
+            author: c.author,
+            date: c.date,
+            content: c.content,
+        }
+    }
+}
+
 /// Represents a file within a package.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PackageFile {

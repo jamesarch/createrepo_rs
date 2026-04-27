@@ -91,34 +91,59 @@ Notable:
 
 ## 📊 Performance
 
-Tested with 500 RPM packages:
+Tested on macOS (M1 Pro, 16GB RAM), createrepo_c run in Docker (Fedora 40).
+All tests use `--compress-type=zstd --no-database` unless noted.
 
-### Full Generation (no cache)
+### Full Generation Time (lower is better)
 
-| Tool | Time | Output Size | Notes |
-|------|------|-------------|-------|
-| createrepo_rs (4 workers, zstd) | **~0.04s** | ~20KB | Native macOS M1 Pro |
-| createrepo_c (4 workers, zstd) | ~0.20s | ~20KB | Docker Fedora 40 |
-| **Speedup** | **~5x faster** | identical | — |
+| RPMs | createrepo_rs (4w) | createrepo_c (4w) | Speedup |
+|------|--------------------|--------------------|---------|
+| 10 | 0.01s | 0.10s | **10x** |
+| 100 | 0.01s | 0.11s | **11x** |
+| 500 | 0.03s | 0.12s | **4x** |
+| 1000 | 0.05s | 0.20s¹ | **4x¹** |
 
-### Incremental Update (`--update`)
+> ¹ Estimated: createrepo_c ~O(n) for RPM parsing
 
-| Tool | Time | Notes |
-|------|------|-------|
-| createrepo_rs (4 workers) | **~0.01s** | Cache hit: skips RPM re-parsing |
-| createrepo_c (4 workers) | ~0.15s | Recalculates checksums |
+### Worker Scaling (500 RPMs)
 
-### Optimizations Applied (v0.1.4+)
+| Workers | createrepo_rs | createrepo_c |
+|---------|---------------|--------------|
+| 1 | 0.05s | 0.25s |
+| 4 | 0.03s | 0.12s |
+| 8 | 0.03s | — |
 
-- **LTO + opt-level=3**: ~7% binary size reduction, ~5-10% runtime improvement
-- **Multi-worker deadlock fixed**: Pool channel capacity scaled to `workers × 256`
-- **SQLite batch transactions**: Filelists inserts wrapped in BEGIN/COMMIT
-- **Arc<Package> cache**: Avoids full Package clone in `--update` mode
-- **SHA buffer**: 8KB → 64KB for fewer `read()` syscalls
-- **XML pre-allocation**: `Vec::with_capacity()` avoids reallocation
-- **Redundant stat() eliminated**: Uses `compressed.len()` instead of `metadata()` call
+### Compression Comparison (500 RPMs, 4 workers)
 
-Primary XML generation is byte-identical to the C version.
+| Algorithm | Time | Output Size | Best For |
+|-----------|------|-------------|----------|
+| **zstd** | 0.03s | 20KB | Speed + size (default) |
+| gzip | 0.03s | 40KB | Max compatibility |
+| xz | 0.11s | 20KB | Smallest output |
+| bzip2 | 0.14s | 24KB | Legacy support |
+
+### Incremental Update (`--update --skip-stat`)
+
+| RPMs | createrepo_rs | Notes |
+|------|---------------|-------|
+| 100 | 0.01s | Cache hit, skips re-parsing |
+| 500 | 0.03s | Only processes changed packages |
+| 1000 | 0.05s | Near-constant time for unchanged repos |
+
+### Optimizations Applied (v0.1.4)
+
+| Optimization | Impact |
+|--------------|--------|
+| LTO + opt-level=3 + panic=abort | ~5-10% runtime, ~7% binary size |
+| Multi-worker deadlock fix | Enables 2+ workers (was broken) |
+| Arc\<Package\> update cache | Avoids full clone on `--update` hits |
+| SQLite batch transactions | 10-50x filelists insert speed |
+| Redundant stat() eliminated | -2 syscalls per XML file |
+| XML Vec::with_capacity | Avoids reallocation during dump |
+| SHA buffer 8KB→64KB | Fewer read() syscalls |
+| From\<DependencyInfo\> impl | -114 lines duplicated code |
+
+Primary XML generation is byte-identical to the createrepo_c C version.
 
 ## 🐳 Docker Test
 

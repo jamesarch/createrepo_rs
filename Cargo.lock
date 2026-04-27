@@ -379,7 +379,7 @@ dependencies = [
 
 [[package]]
 name = "createrepo_rs"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "bzip2",
  "clap",

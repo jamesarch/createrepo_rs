@@ -1,6 +1,6 @@
 [package]
 name = "createrepo_rs"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["jamesarch"]
 description = "🦀 Pure Rust implementation of createrepo_c — generates RPM repository metadata (repodata). Drop-in replacement with identical output, zero FFI."
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/createrepo_rs"
 readme = "README.md"
 keywords = ["rpm", "createrepo", "repodata", "yum", "dnf"]
 categories = ["command-line-utilities", "development-tools::build-utils"]
-rust-version = "1.70"
+rust-version = "1.76"
 
 [dependencies]
 flate2 = "1.0"

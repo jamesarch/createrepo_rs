@@ -11,10 +11,11 @@ use crate::xml::error::XmlError;
 const METADATA_NS: &str = "http://linux.duke.edu/metadata/other";
 
 pub fn dump_other_xml(packages: &[Package], pretty: bool) -> Result<Vec<u8>, XmlError> {
+    let estimated = packages.len() * 128;
     let mut writer = if pretty {
-        Writer::new_with_indent(Vec::new(), b' ', 2)
+        Writer::new_with_indent(Vec::with_capacity(estimated), b' ', 2)
     } else {
-        Writer::new(Vec::new())
+        Writer::new(Vec::with_capacity(estimated))
     };
 
     writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;

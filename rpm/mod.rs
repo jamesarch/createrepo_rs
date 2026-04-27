@@ -498,7 +498,7 @@ impl RpmReader {
 fn compute_sha256(path: &Path) -> Result<String, RpmError> {
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 8192];
+    let mut buffer = [0u8; 65536];
     loop {
         let bytes_read = std::io::Read::read(&mut file, &mut buffer)?;
         if bytes_read == 0 {

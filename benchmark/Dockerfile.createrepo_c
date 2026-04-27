@@ -1,0 +1,6 @@
+FROM fedora:40
+
+RUN dnf install -y createrepo_c && dnf clean all
+
+WORKDIR /work
+ENTRYPOINT ["bash", "-c"]

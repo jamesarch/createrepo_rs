@@ -63,8 +63,8 @@ impl WorkerPool {
     /// Creates a new worker pool with the specified number of workers.
     #[must_use]
     pub fn new(num_workers: usize) -> (Self, Receiver<ProcessingResult>) {
-        let (job_sender, job_receiver) = bounded::<WorkerMessage>(num_workers * 2);
-        let (result_sender, result_receiver) = bounded::<ProcessingResult>(num_workers * 2);
+        let (job_sender, job_receiver) = bounded::<WorkerMessage>(num_workers * 256);
+        let (result_sender, result_receiver) = bounded::<ProcessingResult>(num_workers * 256);
         let shutdown_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let mut workers = Vec::with_capacity(num_workers);
 
@@ -224,102 +224,14 @@ fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
         group: rpm_pkg.group,
         buildhost: rpm_pkg.buildhost,
         sourcerpm: rpm_pkg.sourcerpm,
-        requires: rpm_pkg
-            .requires
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        provides: rpm_pkg
-            .provides
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        conflicts: rpm_pkg
-            .conflicts
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        obsoletes: rpm_pkg
-            .obsoletes
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        suggests: rpm_pkg
-            .suggests
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        enhances: rpm_pkg
-            .enhances
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        recommends: rpm_pkg
-            .recommends
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
-        supplements: rpm_pkg
-            .supplements
-            .into_iter()
-            .map(|d| Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            })
-            .collect(),
+        requires: rpm_pkg.requires.into_iter().map(Dependency::from).collect(),
+        provides: rpm_pkg.provides.into_iter().map(Dependency::from).collect(),
+        conflicts: rpm_pkg.conflicts.into_iter().map(Dependency::from).collect(),
+        obsoletes: rpm_pkg.obsoletes.into_iter().map(Dependency::from).collect(),
+        suggests: rpm_pkg.suggests.into_iter().map(Dependency::from).collect(),
+        enhances: rpm_pkg.enhances.into_iter().map(Dependency::from).collect(),
+        recommends: rpm_pkg.recommends.into_iter().map(Dependency::from).collect(),
+        supplements: rpm_pkg.supplements.into_iter().map(Dependency::from).collect(),
         files: rpm_pkg
             .files
             .into_iter()
@@ -330,15 +242,7 @@ fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
                 size: 0,
             })
             .collect(),
-        changelogs: rpm_pkg
-            .changelogs
-            .into_iter()
-            .map(|c| ChangelogEntry {
-                author: c.author,
-                date: c.date,
-                content: c.content,
-            })
-            .collect(),
+        changelogs: rpm_pkg.changelogs.into_iter().map(ChangelogEntry::from).collect(),
         location_href: Some(location),
         header_start: None,
         header_end: None,

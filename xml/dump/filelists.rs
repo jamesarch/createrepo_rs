@@ -1,16 +1,20 @@
 use std::io::Write;
 use std::path::Path;
 
-use quick_xml::events::{BytesEnd, BytesDecl, BytesStart, BytesText, Event};
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
 
-use crate::compression::{gzip_compress, bzip2_compress, zstd_compress, xz_compress};
+use crate::compression::{bzip2_compress, gzip_compress, xz_compress, zstd_compress};
 use crate::types::{CompressionType, Package, PackageFile};
 use crate::xml::error::XmlError;
 
 const METADATA_NS: &str = "http://linux.duke.edu/metadata/filelists";
 
-pub fn dump_filelists_xml(packages: &[Package], filelists_ext: bool, pretty: bool) -> Result<Vec<u8>, XmlError> {
+pub fn dump_filelists_xml(
+    packages: &[Package],
+    filelists_ext: bool,
+    pretty: bool,
+) -> Result<Vec<u8>, XmlError> {
     let mut writer = if pretty {
         Writer::new_with_indent(Vec::new(), b' ', 2)
     } else {
@@ -42,11 +46,11 @@ pub fn dump_filelists(
 ) -> Result<(), XmlError> {
     let xml_content = dump_filelists_xml(packages, false, pretty)?;
 
-    if compression != CompressionType::None {
+    if compression == CompressionType::None {
+        std::fs::write(output, xml_content)?;
+    } else {
         let compressed = compress_bytes(&xml_content, compression)?;
         std::fs::write(output, compressed)?;
-    } else {
-        std::fs::write(output, xml_content)?;
     }
 
     Ok(())
@@ -60,11 +64,11 @@ pub fn dump_filelists_ext(
 ) -> Result<(), XmlError> {
     let xml_content = dump_filelists_xml(packages, true, pretty)?;
 
-    if compression != CompressionType::None {
+    if compression == CompressionType::None {
+        std::fs::write(output, xml_content)?;
+    } else {
         let compressed = compress_bytes(&xml_content, compression)?;
         std::fs::write(output, compressed)?;
-    } else {
-        std::fs::write(output, xml_content)?;
     }
 
     Ok(())
@@ -136,14 +140,10 @@ fn write_file_elements<W: Write>(
 
 fn compress_bytes(content: &[u8], compression: CompressionType) -> Result<Vec<u8>, XmlError> {
     match compression {
-        CompressionType::Gzip => gzip_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Bzip2 => bzip2_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Xz => xz_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Zstd => zstd_compress(content, 6)
-            .map_err(XmlError::IoError),
+        CompressionType::Gzip => gzip_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Bzip2 => bzip2_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Xz => xz_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Zstd => zstd_compress(content, 6).map_err(XmlError::IoError),
         CompressionType::None => Ok(content.to_vec()),
     }
 }

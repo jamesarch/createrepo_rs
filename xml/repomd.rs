@@ -1,8 +1,7 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct RepomdRecord {
     pub type_: String,
     pub location: String,
@@ -12,7 +11,6 @@ pub struct RepomdRecord {
     pub open_size: Option<i64>,
     pub open_checksum: Option<String>,
 }
-
 
 pub fn parse_repomd(xml_data: &[u8]) -> Result<Vec<RepomdRecord>, String> {
     let mut reader = Reader::from_reader(xml_data);
@@ -56,20 +54,21 @@ pub fn parse_repomd(xml_data: &[u8]) -> Result<Vec<RepomdRecord>, String> {
                     for attr in e.attributes().flatten() {
                         let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
                         if key == "href" {
-                            current_record.location = String::from_utf8_lossy(&attr.value).to_string();
+                            current_record.location =
+                                String::from_utf8_lossy(&attr.value).to_string();
                         }
                     }
                 }
             }
             Ok(Event::Text(e)) if in_data => {
-                    let text = String::from_utf8_lossy(&e).to_string();
-                    match current_element.as_str() {
-                        "checksum" => current_record.checksum = Some(text),
-                        "timestamp" => current_record.timestamp = text.parse().ok(),
-                        "size" => current_record.size = text.parse().ok(),
-                        "open-size" => current_record.open_size = text.parse().ok(),
-                        "open-checksum" => current_record.open_checksum = Some(text),
-                        _ => {}
+                let text = String::from_utf8_lossy(&e).to_string();
+                match current_element.as_str() {
+                    "checksum" => current_record.checksum = Some(text),
+                    "timestamp" => current_record.timestamp = text.parse().ok(),
+                    "size" => current_record.size = text.parse().ok(),
+                    "open-size" => current_record.open_size = text.parse().ok(),
+                    "open-checksum" => current_record.open_checksum = Some(text),
+                    _ => {}
                 }
             }
             Ok(Event::End(e)) => {
@@ -83,7 +82,7 @@ pub fn parse_repomd(xml_data: &[u8]) -> Result<Vec<RepomdRecord>, String> {
                 current_element.clear();
             }
             Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("XML parse error: {}", e)),
+            Err(e) => return Err(format!("XML parse error: {e}")),
             _ => {}
         }
     }

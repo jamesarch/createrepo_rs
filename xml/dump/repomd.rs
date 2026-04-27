@@ -3,7 +3,7 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use quick_xml::events::{BytesEnd, BytesDecl, BytesStart, BytesText, Event};
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
 
 use crate::types::{Repomd, RepomdRecord};
@@ -12,11 +12,7 @@ use crate::xml::error::XmlError;
 const REPOMD_NS: &str = "http://linux.duke.edu/metadata/repo";
 const RPM_NS: &str = "http://linux.duke.edu/metadata/rpm";
 
-pub fn dump_repomd(
-    repomd: &Repomd,
-    output: &Path,
-    pretty: bool,
-) -> Result<(), XmlError> {
+pub fn dump_repomd(repomd: &Repomd, output: &Path, pretty: bool) -> Result<(), XmlError> {
     let file = File::create(output)?;
     let mut writer = if pretty {
         Writer::new_with_indent(BufWriter::new(file), b' ', 2)
@@ -60,7 +56,7 @@ fn write_revision_element<W: Write>(
     } else {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_else(|_| std::time::Duration::from_secs(0))
             .as_secs()
             .to_string()
     };

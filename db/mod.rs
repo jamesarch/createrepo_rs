@@ -1,6 +1,6 @@
-use std::path::Path;
-use rusqlite::{Connection, params};
 use crate::types::Package;
+use rusqlite::{params, Connection};
+use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -11,7 +11,7 @@ pub enum DbError {
     IoError(#[from] std::io::Error),
 }
 
-/// Combined database handle for all repomd SQLite tables.
+/// Combined database handle for all repomd `SQLite` tables.
 /// This provides a unified interface for inserting packages into
 /// the primary, filelists, and other tables.
 pub struct RepomdDb {
@@ -23,7 +23,7 @@ pub struct RepomdDb {
 impl RepomdDb {
     /// Initialize all three databases.
     pub fn new(path: &Path) -> Result<Self, DbError> {
-        Ok(RepomdDb {
+        Ok(Self {
             primary: PrimaryDb::new(path)?,
             filelists: FilelistsDb::new(path)?,
             other: OtherDb::new(path)?,
@@ -48,15 +48,12 @@ impl RepomdDb {
     }
 }
 
-/// Insert a package into all repomd SQLite tables.
+/// Insert a package into all repomd `SQLite` tables.
 /// This is a convenience function that creates temporary database
 /// connections, inserts the package, and closes the connections.
 ///
-/// Note: For bulk inserts, use RepomdDb directly for better performance.
-pub fn db_insert_packages(
-    db_path: &Path,
-    packages: &[Package],
-) -> Result<(), DbError> {
+/// Note: For bulk inserts, use `RepomdDb` directly for better performance.
+pub fn db_insert_packages(db_path: &Path, packages: &[Package]) -> Result<(), DbError> {
     let db = RepomdDb::new(db_path)?;
     for pkg in packages {
         if let Err(e) = db.insert_package(pkg) {
@@ -68,7 +65,7 @@ pub fn db_insert_packages(
 }
 
 /// Initialize the database at the given path.
-/// Returns a RepomdDb handle ready for package insertion.
+/// Returns a `RepomdDb` handle ready for package insertion.
 pub fn db_init(path: &Path) -> Result<RepomdDb, DbError> {
     RepomdDb::new(path)
 }
@@ -119,9 +116,9 @@ impl PrimaryDb {
                  location_base TEXT,
                  checksum TEXT,
                  checksum_type TEXT
-             );"
+             );",
         )?;
-        Ok(PrimaryDb { conn })
+        Ok(Self { conn })
     }
 
     pub fn insert_package(&self, pkg: &Package) -> Result<i64, DbError> {
@@ -197,9 +194,9 @@ CREATE TABLE IF NOT EXISTS \"filelist\" (
                  filename TEXT NOT NULL,
                  type TEXT
              );
-             CREATE INDEX IF NOT EXISTS filelist_idx ON filelist(pkgId);"
+             CREATE INDEX IF NOT EXISTS filelist_idx ON filelist(pkgId);",
         )?;
-        Ok(FilelistsDb { conn })
+        Ok(Self { conn })
     }
 
     pub fn insert_package(&self, pkg: &Package, pkg_key: i64) -> Result<(), DbError> {
@@ -253,9 +250,9 @@ CREATE TABLE IF NOT EXISTS \"other\" (
                  release TEXT,
                  filename TEXT NOT NULL
              );
-             CREATE INDEX IF NOT EXISTS other_idx ON other(pkgId);"
+             CREATE INDEX IF NOT EXISTS other_idx ON other(pkgId);",
         )?;
-        Ok(OtherDb { conn })
+        Ok(Self { conn })
     }
 
     pub fn insert_package(&self, pkg: &Package, pkg_key: i64) -> Result<(), DbError> {

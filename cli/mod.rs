@@ -1,13 +1,12 @@
-//! CLI argument parsing for createrepo_c binary.
+//! CLI argument parsing for `createrepo_c` binary.
 //!
 //! This module provides command-line argument parsing using clap.
 
-use std::path::PathBuf;
 use clap::{Parser, ValueHint};
+use std::path::PathBuf;
 
 /// Compression type for metadata files.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompressionType {
     #[default]
     Gzip,
@@ -17,15 +16,14 @@ pub enum CompressionType {
     None,
 }
 
-
 impl std::fmt::Display for CompressionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompressionType::Gzip => write!(f, "gz"),
-            CompressionType::Bzip2 => write!(f, "bz2"),
-            CompressionType::Xz => write!(f, "xz"),
-            CompressionType::Zstd => write!(f, "zst"),
-            CompressionType::None => write!(f, "none"),
+            Self::Gzip => write!(f, "gz"),
+            Self::Bzip2 => write!(f, "bz2"),
+            Self::Xz => write!(f, "xz"),
+            Self::Zstd => write!(f, "zst"),
+            Self::None => write!(f, "none"),
         }
     }
 }
@@ -35,17 +33,17 @@ impl std::str::FromStr for CompressionType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "gz" | "gzip" => Ok(CompressionType::Gzip),
-            "bz2" | "bzip2" => Ok(CompressionType::Bzip2),
-            "xz" => Ok(CompressionType::Xz),
-            "zst" | "zstd" => Ok(CompressionType::Zstd),
-            "none" => Ok(CompressionType::None),
-            _ => Err(format!("Unknown compression type: {}", s)),
+            "gz" | "gzip" => Ok(Self::Gzip),
+            "bz2" | "bzip2" => Ok(Self::Bzip2),
+            "xz" => Ok(Self::Xz),
+            "zst" | "zstd" => Ok(Self::Zstd),
+            "none" => Ok(Self::None),
+            _ => Err(format!("Unknown compression type: {s}")),
         }
     }
 }
 
-/// CLI arguments for createrepo_c.
+/// CLI arguments for `createrepo_c`.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
@@ -105,7 +103,7 @@ pub struct Cli {
     #[arg(long, default_value = "true")]
     pub unique_md_filenames: bool,
 
-    /// Don't generate SQLite databases.
+    /// Don't generate `SQLite` databases.
     #[arg(long)]
     pub no_database: bool,
 
@@ -165,7 +163,7 @@ pub struct Cli {
     #[arg(long, value_hint = ValueHint::DirPath)]
     pub update_md_path: Option<PathBuf>,
 
-    /// Skip the stat() call on a --update.
+    /// Skip the `stat()` call on a --update.
     #[arg(long)]
     pub skip_stat: bool,
 
@@ -229,11 +227,11 @@ pub struct Cli {
     #[arg(long)]
     pub local_sqlite: bool,
 
-    /// Ignore NUM of directory components in location_href.
+    /// Ignore NUM of directory components in `location_href`.
     #[arg(long)]
     pub cut_dirs: Option<usize>,
 
-    /// Append prefix before location_href.
+    /// Append prefix before `location_href`.
     #[arg(long)]
     pub location_prefix: Option<String>,
 
@@ -256,11 +254,13 @@ pub struct Cli {
 
 impl Cli {
     /// Parse command line arguments.
+    #[must_use]
     pub fn parse_args() -> Self {
         Self::parse()
     }
 
     /// Get the exclude patterns as a vector of strings.
+    #[must_use]
     pub fn exclude_patterns(&self) -> Vec<String> {
         self.excludes
             .as_ref()
@@ -269,15 +269,18 @@ impl Cli {
     }
 
     /// Get the compression type.
+    #[must_use]
     pub fn compression(&self) -> CompressionType {
         self.compress_type.parse().unwrap_or(CompressionType::Gzip)
     }
 
     /// Get the workers count or default to number of CPUs.
+    #[must_use]
     pub fn workers(&self) -> usize {
         self.workers.unwrap_or(num_cpus::get())
     }
 
+    #[must_use]
     pub fn distro_tags(&self) -> Vec<(Option<String>, String)> {
         self.distro
             .iter()
@@ -291,26 +294,31 @@ impl Cli {
             .collect()
     }
 
+    #[must_use]
     pub fn content_tags(&self) -> Vec<String> {
         self.content_tag.clone()
     }
 
+    #[must_use]
     pub fn repo_tags(&self) -> Vec<String> {
         self.repo_tag.clone()
     }
 
-    /// Returns true if simple_md_filenames is set (no checksum in filenames).
-    pub fn is_simple_md_filenames(&self) -> bool {
+    /// Returns true if `simple_md_filenames` is set (no checksum in filenames).
+    #[must_use]
+    pub const fn is_simple_md_filenames(&self) -> bool {
         self.simple_md_filenames
     }
 
     /// Returns true if any metadata retention policy is set.
-    pub fn has_retain_policy(&self) -> bool {
+    #[must_use]
+    pub const fn has_retain_policy(&self) -> bool {
         self.retain_old_md || self.retain_old_md_by_age.is_some()
     }
 
     /// Returns true if additional metadata handling is explicit.
-    pub fn has_additional_metadata_policy(&self) -> bool {
+    #[must_use]
+    pub const fn has_additional_metadata_policy(&self) -> bool {
         self.keep_all_metadata || self.discard_additional_metadata
     }
 }

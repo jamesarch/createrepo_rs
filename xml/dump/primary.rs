@@ -1,10 +1,10 @@
 use std::io::Write;
 use std::path::Path;
 
-use quick_xml::events::{BytesEnd, BytesDecl, BytesStart, BytesText, Event};
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
 
-use crate::compression::{gzip_compress, bzip2_compress, zstd_compress, xz_compress};
+use crate::compression::{bzip2_compress, gzip_compress, xz_compress, zstd_compress};
 use crate::types::{ChecksumType, CompressionType, Dependency, Package, PackageFile};
 use crate::xml::error::XmlError;
 
@@ -46,11 +46,11 @@ pub fn dump_primary(
 ) -> Result<(), XmlError> {
     let xml_content = dump_primary_xml(packages, pretty)?;
 
-    if compression != CompressionType::None {
+    if compression == CompressionType::None {
+        std::fs::write(output, xml_content)?;
+    } else {
         let compressed = compress_bytes(&xml_content, compression)?;
         std::fs::write(output, compressed)?;
-    } else {
-        std::fs::write(output, xml_content)?;
     }
 
     Ok(())
@@ -64,14 +64,22 @@ fn write_package_element<W: Write>(
     pkg_start.push_attribute(("type", "rpm"));
     writer.write_event(Event::Start(pkg_start))?;
 
-    write_text_element(writer, "name", &package.name);
-    write_text_element(writer, "arch", &package.arch);
+    write_text_element(writer, "name", &package.name)?;
+    write_text_element(writer, "arch", &package.arch)?;
     let _ = write_version_element(writer, package);
     let _ = write_checksum_element(writer, package);
-    write_text_element(writer, "summary", package.summary.as_deref().unwrap_or(""));
-    write_text_element(writer, "description", package.description.as_deref().unwrap_or(""));
-    write_text_element(writer, "packager", package.packager.as_deref().unwrap_or(""));
-    write_text_element(writer, "url", package.url.as_deref().unwrap_or(""));
+    write_text_element(writer, "summary", package.summary.as_deref().unwrap_or(""))?;
+    write_text_element(
+        writer,
+        "description",
+        package.description.as_deref().unwrap_or(""),
+    )?;
+    write_text_element(
+        writer,
+        "packager",
+        package.packager.as_deref().unwrap_or(""),
+    )?;
+    write_text_element(writer, "url", package.url.as_deref().unwrap_or(""))?;
 
     let _ = write_time_element(writer, package);
     let _ = write_size_element(writer, package);
@@ -109,10 +117,7 @@ fn write_checksum_element<W: Write>(
     Ok(())
 }
 
-fn write_time_element<W: Write>(
-    writer: &mut Writer<W>,
-    package: &Package,
-) -> Result<(), XmlError> {
+fn write_time_element<W: Write>(writer: &mut Writer<W>, package: &Package) -> Result<(), XmlError> {
     let mut time_start = BytesStart::new("time");
     time_start.push_attribute(("file", package.time_file.to_string().as_str()));
     time_start.push_attribute(("build", package.time_build.to_string().as_str()));
@@ -120,10 +125,7 @@ fn write_time_element<W: Write>(
     Ok(())
 }
 
-fn write_size_element<W: Write>(
-    writer: &mut Writer<W>,
-    package: &Package,
-) -> Result<(), XmlError> {
+fn write_size_element<W: Write>(writer: &mut Writer<W>, package: &Package) -> Result<(), XmlError> {
     let mut size_start = BytesStart::new("size");
     size_start.push_attribute(("package", package.size_package.to_string().as_str()));
     size_start.push_attribute(("installed", package.size_installed.to_string().as_str()));
@@ -149,11 +151,27 @@ fn write_format_element<W: Write>(
     let format_start = BytesStart::new("format");
     writer.write_event(Event::Start(format_start))?;
 
-    write_text_element(writer, "rpm:license", package.license.as_deref().unwrap_or(""));
-    write_text_element(writer, "rpm:vendor", package.vendor.as_deref().unwrap_or(""));
-    write_text_element(writer, "rpm:group", package.group.as_deref().unwrap_or(""));
-    write_text_element(writer, "rpm:buildhost", package.buildhost.as_deref().unwrap_or(""));
-    write_text_element(writer, "rpm:sourcerpm", package.sourcerpm.as_deref().unwrap_or(""));
+    write_text_element(
+        writer,
+        "rpm:license",
+        package.license.as_deref().unwrap_or(""),
+    )?;
+    write_text_element(
+        writer,
+        "rpm:vendor",
+        package.vendor.as_deref().unwrap_or(""),
+    )?;
+    write_text_element(writer, "rpm:group", package.group.as_deref().unwrap_or(""))?;
+    write_text_element(
+        writer,
+        "rpm:buildhost",
+        package.buildhost.as_deref().unwrap_or(""),
+    )?;
+    write_text_element(
+        writer,
+        "rpm:sourcerpm",
+        package.sourcerpm.as_deref().unwrap_or(""),
+    )?;
 
     let _ = write_header_range_element(writer, package);
     let _ = write_pco_elements(writer, "rpm:provides", &package.provides);
@@ -249,13 +267,14 @@ fn write_text_element<W: Write>(
     writer: &mut Writer<W>,
     name: &str,
     text: &str,
-) {
-    writer.write_event(Event::Start(BytesStart::new(name))).unwrap();
-    writer.write_event(Event::Text(BytesText::new(text))).unwrap();
-    writer.write_event(Event::End(BytesEnd::new(name))).unwrap();
+) -> Result<(), XmlError> {
+    writer.write_event(Event::Start(BytesStart::new(name)))?;
+    writer.write_event(Event::Text(BytesText::new(text)))?;
+    writer.write_event(Event::End(BytesEnd::new(name)))?;
+    Ok(())
 }
 
-fn checksum_type_str(ct: ChecksumType) -> &'static str {
+const fn checksum_type_str(ct: ChecksumType) -> &'static str {
     match ct {
         ChecksumType::Md5 => "md5",
         ChecksumType::Sha1 => "sha1",
@@ -269,14 +288,10 @@ fn checksum_type_str(ct: ChecksumType) -> &'static str {
 
 fn compress_bytes(content: &[u8], compression: CompressionType) -> Result<Vec<u8>, XmlError> {
     match compression {
-        CompressionType::Gzip => gzip_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Bzip2 => bzip2_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Xz => xz_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Zstd => zstd_compress(content, 6)
-            .map_err(XmlError::IoError),
+        CompressionType::Gzip => gzip_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Bzip2 => bzip2_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Xz => xz_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Zstd => zstd_compress(content, 6).map_err(XmlError::IoError),
         CompressionType::None => Ok(content.to_vec()),
     }
 }

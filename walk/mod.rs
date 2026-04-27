@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 use glob::Pattern;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
+use walkdir::WalkDir;
 
 #[derive(Error, Debug)]
 pub enum WalkError {
@@ -21,10 +21,8 @@ pub struct DirectoryWalker {
 
 impl DirectoryWalker {
     pub fn new(path: &Path) -> Result<Self, WalkError> {
-        let walker = WalkDir::new(path)
-            .follow_links(false)
-            .into_iter();
-        Ok(DirectoryWalker {
+        let walker = WalkDir::new(path).follow_links(false).into_iter();
+        Ok(Self {
             path: path.to_path_buf(),
             exclude_patterns: Vec::new(),
             skip_symlinks: false,
@@ -40,12 +38,13 @@ impl DirectoryWalker {
         Ok(self)
     }
 
-    pub fn skip_symlinks(mut self, skip: bool) -> Self {
+    #[must_use]
+    pub const fn skip_symlinks(mut self, skip: bool) -> Self {
         self.skip_symlinks = skip;
         self
     }
 
-    pub fn init(self) -> Result<Self, WalkError> {
+    pub const fn init(self) -> Result<Self, WalkError> {
         Ok(self)
     }
 }
@@ -96,6 +95,7 @@ impl Iterator for DirectoryWalker {
 }
 
 impl DirectoryWalker {
+    #[must_use]
     pub fn collect(self) -> Vec<PathBuf> {
         let mut results = Vec::new();
         for path in self {

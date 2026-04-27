@@ -1,7 +1,7 @@
-use std::io::{Read, Write};
 use bzip2::read::BzDecoder;
 use bzip2::write::BzEncoder;
 use bzip2::Compression;
+use std::io::{Read, Write};
 
 pub fn decompress(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut decoder = BzDecoder::new(data);

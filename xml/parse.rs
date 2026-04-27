@@ -10,19 +10,17 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 
 use crate::compression::{bzip2_decompress, gzip_decompress, xz_decompress, zstd_decompress};
-use crate::types::{
-    ChangelogEntry, ChecksumType, Dependency, Package, PackageFile,
-};
+use crate::types::{ChangelogEntry, ChecksumType, Dependency, Package, PackageFile};
 
 /// Read a metadata file from disk, decompressing based on extension.
 pub fn read_metadata_file(path: &Path) -> Result<Vec<u8>, String> {
     let raw = std::fs::read(path).map_err(|e| format!("read {}: {}", path.display(), e))?;
     let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
     match ext {
-        "gz" => gzip_decompress(&raw).map_err(|e| format!("gzip decode: {}", e)),
-        "bz2" => bzip2_decompress(&raw).map_err(|e| format!("bzip2 decode: {}", e)),
-        "xz" => xz_decompress(&raw).map_err(|e| format!("xz decode: {}", e)),
-        "zst" | "zstd" => zstd_decompress(&raw).map_err(|e| format!("zstd decode: {}", e)),
+        "gz" => gzip_decompress(&raw).map_err(|e| format!("gzip decode: {e}")),
+        "bz2" => bzip2_decompress(&raw).map_err(|e| format!("bzip2 decode: {e}")),
+        "xz" => xz_decompress(&raw).map_err(|e| format!("xz decode: {e}")),
+        "zst" | "zstd" => zstd_decompress(&raw).map_err(|e| format!("zstd decode: {e}")),
         _ => Ok(raw),
     }
 }
@@ -55,7 +53,7 @@ fn parse_dep_entry(attrs: &HashMap<String, String>) -> Dependency {
         version: attrs.get("ver").cloned(),
         release: attrs.get("rel").cloned(),
         flags: attrs.get("flags").cloned().unwrap_or_default(),
-        pre: attrs.get("pre").map(|v| v == "1" || v == "true").unwrap_or(false),
+        pre: attrs.get("pre").is_some_and(|v| v == "1" || v == "true"),
     }
 }
 
@@ -183,12 +181,10 @@ pub fn parse_primary_xml(xml: &[u8]) -> Result<Vec<Package>, String> {
                     }
                 }
             }
-            Ok(Event::Text(t)) => {
-                match t.unescape() {
-                    Ok(s) => text_buf.push_str(&s),
-                    Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
-                }
-            }
+            Ok(Event::Text(t)) => match t.unescape() {
+                Ok(s) => text_buf.push_str(&s),
+                Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
+            },
             Ok(Event::CData(t)) => {
                 text_buf.push_str(&String::from_utf8_lossy(t.as_ref()));
             }
@@ -198,7 +194,7 @@ pub fn parse_primary_xml(xml: &[u8]) -> Result<Vec<Package>, String> {
                     let text = text_buf.trim().to_string();
                     match name.as_str() {
                         "name" => p.name = text.clone(),
-                        "arch" => p.arch = text.clone(),
+                        "arch" => p.arch = text,
                         "checksum" => p.pkgid = text.clone(),
                         "summary" => p.summary = Some(text.clone()),
                         "description" => p.description = Some(text.clone()),
@@ -233,14 +229,10 @@ pub fn parse_primary_xml(xml: &[u8]) -> Result<Vec<Package>, String> {
                             }
                             current_file_type = None;
                         }
-                        "rpm:provides" | "provides"
-                        | "rpm:requires" | "requires"
-                        | "rpm:conflicts" | "conflicts"
-                        | "rpm:obsoletes" | "obsoletes"
-                        | "rpm:suggests" | "suggests"
-                        | "rpm:enhances" | "enhances"
-                        | "rpm:recommends" | "recommends"
-                        | "rpm:supplements" | "supplements" => {
+                        "rpm:provides" | "provides" | "rpm:requires" | "requires"
+                        | "rpm:conflicts" | "conflicts" | "rpm:obsoletes" | "obsoletes"
+                        | "rpm:suggests" | "suggests" | "rpm:enhances" | "enhances"
+                        | "rpm:recommends" | "recommends" | "rpm:supplements" | "supplements" => {
                             current_pco = None;
                         }
                         "package" => {
@@ -259,7 +251,7 @@ pub fn parse_primary_xml(xml: &[u8]) -> Result<Vec<Package>, String> {
                 text_buf.clear();
             }
             Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("primary.xml parse error: {}", e)),
+            Err(e) => return Err(format!("primary.xml parse error: {e}")),
             _ => {}
         }
     }
@@ -296,12 +288,10 @@ pub fn parse_filelists_xml(xml: &[u8]) -> Result<HashMap<String, Vec<PackageFile
                 }
                 text_buf.clear();
             }
-            Ok(Event::Text(t)) => {
-                match t.unescape() {
-                    Ok(s) => text_buf.push_str(&s),
-                    Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
-                }
-            }
+            Ok(Event::Text(t)) => match t.unescape() {
+                Ok(s) => text_buf.push_str(&s),
+                Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
+            },
             Ok(Event::CData(t)) => {
                 text_buf.push_str(&String::from_utf8_lossy(t.as_ref()));
             }
@@ -332,7 +322,7 @@ pub fn parse_filelists_xml(xml: &[u8]) -> Result<HashMap<String, Vec<PackageFile
                 text_buf.clear();
             }
             Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("filelists.xml parse error: {}", e)),
+            Err(e) => return Err(format!("filelists.xml parse error: {e}")),
             _ => {}
         }
     }
@@ -370,12 +360,10 @@ pub fn parse_other_xml(xml: &[u8]) -> Result<HashMap<String, Vec<ChangelogEntry>
                 }
                 text_buf.clear();
             }
-            Ok(Event::Text(t)) => {
-                match t.unescape() {
-                    Ok(s) => text_buf.push_str(&s),
-                    Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
-                }
-            }
+            Ok(Event::Text(t)) => match t.unescape() {
+                Ok(s) => text_buf.push_str(&s),
+                Err(_) => text_buf.push_str(&String::from_utf8_lossy(t.as_ref())),
+            },
             Ok(Event::CData(t)) => {
                 text_buf.push_str(&String::from_utf8_lossy(t.as_ref()));
             }
@@ -400,7 +388,7 @@ pub fn parse_other_xml(xml: &[u8]) -> Result<HashMap<String, Vec<ChangelogEntry>
                 text_buf.clear();
             }
             Ok(Event::Eof) => break,
-            Err(e) => return Err(format!("other.xml parse error: {}", e)),
+            Err(e) => return Err(format!("other.xml parse error: {e}")),
             _ => {}
         }
     }
@@ -507,6 +495,9 @@ mod tests {
         assert_eq!(parsed[0].name, "foo");
         assert_eq!(parsed[0].size_package, 100);
         assert_eq!(parsed[0].time_file, 1234);
-        assert_eq!(parsed[0].location_href.as_deref(), Some("foo-1.0-1.x86_64.rpm"));
+        assert_eq!(
+            parsed[0].location_href.as_deref(),
+            Some("foo-1.0-1.x86_64.rpm")
+        );
     }
 }

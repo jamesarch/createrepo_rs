@@ -3,7 +3,7 @@
 //! This module provides pure Rust XML generation using quick-xml
 //! to produce primary.xml, filelists.xml, other.xml, and repomd.xml.
 
-pub mod primary;
 pub mod filelists;
 pub mod other;
+pub mod primary;
 pub mod repomd;

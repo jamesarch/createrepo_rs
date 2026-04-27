@@ -1,4 +1,4 @@
-//! # createrepo_rs
+//! # `createrepo_rs`
 //!
 //! Pure Rust implementation of `createrepo_c` — generates RPM repository metadata
 //! (repodata) from a directory of RPM packages.
@@ -15,12 +15,12 @@
 //! ## Modules
 //!
 //! - [`cli`] — CLI argument parsing (52+ parameters)
-//! - [`types`] — Core types: Package, Dependency, RepomdRecord
+//! - [`types`] — Core types: Package, Dependency, `RepomdRecord`
 //! - [`rpm`] — RPM header parsing
 //! - [`compression`] — gzip, bzip2, zstd, xz
 //! - [`xml`] — XML generation (primary, filelists, other, repomd)
 //! - [`pool`] — Parallel worker pool
-//! - [`db`] — SQLite database generation
+//! - [`db`] — `SQLite` database generation
 //! - [`walk`] — Directory traversal
 
 pub mod cli;

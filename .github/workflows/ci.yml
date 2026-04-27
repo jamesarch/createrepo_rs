@@ -19,19 +19,22 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --all -- --check
 
       - name: Build
         run: cargo build --release
 
       - name: Clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo test --bin createrepo_rs --release
+        run: cargo test --all-targets
 
   linux-static:
     name: Linux Static Binary (x86_64 musl)

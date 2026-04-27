@@ -4,11 +4,14 @@ use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sha2::{Digest, Sha256, Sha384, Sha512};
 use createrepo_rs::cli::Cli;
 use createrepo_rs::db::{self, RepomdDb};
-use createrepo_rs::types::{CompressionType as TypesCompression, ContentTag, DistroTag, Package, RepoTag, Repomd, RepomdRecord};
+use createrepo_rs::types::{
+    CompressionType as TypesCompression, ContentTag, DistroTag, Package, RepoTag, Repomd,
+    RepomdRecord,
+};
 use createrepo_rs::xml::dump;
+use sha2::{Digest, Sha256, Sha384, Sha512};
 
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
@@ -40,15 +43,31 @@ fn main() -> ExitCode {
     ctrlc::set_handler(move || {
         INTERRUPTED.store(true, Ordering::SeqCst);
         eprintln!("\nInterrupted... cleaning up");
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let cli = Cli::parse_args();
     let repo_path = &cli.path;
     let output_dir = cli.outputdir.as_ref().unwrap_or(repo_path);
 
-    log!(&cli, LogLevel::Normal, "createrepo_rs v{}", env!("CARGO_PKG_VERSION"));
-    log!(&cli, LogLevel::Normal, "Repository path: {}", repo_path.display());
-    log!(&cli, LogLevel::Normal, "Output path: {}", output_dir.display());
+    log!(
+        &cli,
+        LogLevel::Normal,
+        "createrepo_rs v{}",
+        env!("CARGO_PKG_VERSION")
+    );
+    log!(
+        &cli,
+        LogLevel::Normal,
+        "Repository path: {}",
+        repo_path.display()
+    );
+    log!(
+        &cli,
+        LogLevel::Normal,
+        "Output path: {}",
+        output_dir.display()
+    );
 
     // Cache of packages from existing repodata, keyed by location_href.
     // Populated only when --update is set and we can read the source repodata.
@@ -91,11 +110,20 @@ fn main() -> ExitCode {
     }
 
     if cli.simple_md_filenames {
-        log!(&cli, LogLevel::Normal, "Note: Using simple-md-filenames (no checksums in metadata filenames)");
+        log!(
+            &cli,
+            LogLevel::Normal,
+            "Note: Using simple-md-filenames (no checksums in metadata filenames)"
+        );
     }
 
     if !repo_path.exists() || !repo_path.is_dir() {
-        log!(&cli, LogLevel::Error, "Error: Directory '{}' does not exist or is not a directory", repo_path.display());
+        log!(
+            &cli,
+            LogLevel::Error,
+            "Error: Directory '{}' does not exist or is not a directory",
+            repo_path.display()
+        );
         return ExitCode::from(1);
     }
 
@@ -118,12 +146,22 @@ fn main() -> ExitCode {
                             if full_path.exists() {
                                 rpm_files.push(full_path);
                             } else {
-                                log!(&cli, LogLevel::Warning, "Warning: Package from pkglist not found: {}", trimmed);
+                                log!(
+                                    &cli,
+                                    LogLevel::Warning,
+                                    "Warning: Package from pkglist not found: {}",
+                                    trimmed
+                                );
                             }
                         }
                     }
                 }
-                log!(&cli, LogLevel::Normal, "Read {} packages from pkglist", rpm_files.len());
+                log!(
+                    &cli,
+                    LogLevel::Normal,
+                    "Read {} packages from pkglist",
+                    rpm_files.len()
+                );
             }
             Err(e) => {
                 log!(&cli, LogLevel::Error, "Error reading pkglist file: {}", e);
@@ -144,11 +182,21 @@ fn main() -> ExitCode {
                 if full_path.exists() {
                     rpm_files.push(full_path);
                 } else {
-                    log!(&cli, LogLevel::Warning, "Warning: Included package not found: {}", pkg_spec);
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: Included package not found: {}",
+                        pkg_spec
+                    );
                 }
             }
         }
-        log!(&cli, LogLevel::Normal, "Added {} packages from --includepkg", cli.includepkg.len());
+        log!(
+            &cli,
+            LogLevel::Normal,
+            "Added {} packages from --includepkg",
+            cli.includepkg.len()
+        );
     }
 
     // If no pkglist or includepkg, scan the directory
@@ -157,7 +205,12 @@ fn main() -> ExitCode {
         let walker = match createrepo_rs::walk::DirectoryWalker::new(repo_path) {
             Ok(w) => w,
             Err(e) => {
-                log!(&cli, LogLevel::Error, "Error creating directory walker: {}", e);
+                log!(
+                    &cli,
+                    LogLevel::Error,
+                    "Error creating directory walker: {}",
+                    e
+                );
                 return ExitCode::from(1);
             }
         };
@@ -182,7 +235,11 @@ fn main() -> ExitCode {
     log!(&cli, LogLevel::Normal, "Found {} packages", package_count);
 
     if package_count == 0 {
-        log!(&cli, LogLevel::Error, "Error: No packages found in directory");
+        log!(
+            &cli,
+            LogLevel::Error,
+            "Error: No packages found in directory"
+        );
         return ExitCode::from(1);
     }
 
@@ -200,13 +257,23 @@ fn main() -> ExitCode {
 
     if repodata_tmp.exists() {
         if let Err(e) = std::fs::remove_dir_all(&repodata_tmp) {
-            log!(&cli, LogLevel::Error, "Error removing temp directory: {}", e);
+            log!(
+                &cli,
+                LogLevel::Error,
+                "Error removing temp directory: {}",
+                e
+            );
             return ExitCode::from(1);
         }
     }
 
     if let Err(e) = std::fs::create_dir_all(&repodata_tmp) {
-        log!(&cli, LogLevel::Error, "Error creating temp repodata directory: {}", e);
+        log!(
+            &cli,
+            LogLevel::Error,
+            "Error creating temp repodata directory: {}",
+            e
+        );
         return ExitCode::from(1);
     }
 
@@ -217,42 +284,65 @@ fn main() -> ExitCode {
     } else {
         match db::db_init(&db_path) {
             Ok(db) => {
-                log!(&cli, LogLevel::Normal, "Database enabled: {}", db_path.display());
+                log!(
+                    &cli,
+                    LogLevel::Normal,
+                    "Database enabled: {}",
+                    db_path.display()
+                );
                 Some(db)
             }
             Err(e) => {
-                log!(&cli, LogLevel::Warning, "Warning: Failed to initialize database: {}", e);
+                log!(
+                    &cli,
+                    LogLevel::Warning,
+                    "Warning: Failed to initialize database: {}",
+                    e
+                );
                 None
             }
         }
     };
 
     let num_workers = cli.workers();
-    log!(&cli, LogLevel::Normal, "Processing packages with {} workers...", num_workers);
+    log!(
+        &cli,
+        LogLevel::Normal,
+        "Processing packages with {} workers...",
+        num_workers
+    );
 
     let mut packages: Vec<Package> = Vec::new();
     let mut errors = 0;
 
     // Parse changelog_limit if provided
-    let changelog_limit: Option<usize> = cli.changelog_limit.as_ref().and_then(|s| {
-        s.parse::<usize>().ok()
-    });
+    let changelog_limit: Option<usize> = cli
+        .changelog_limit
+        .as_ref()
+        .and_then(|s| s.parse::<usize>().ok());
 
     // In --update mode, partition discovered RPMs into cache hits (reuse stored
     // metadata) vs. misses (must re-read the RPM).
     let mut to_process: Vec<PathBuf> = Vec::with_capacity(rpm_files.len());
     let mut cache_hits = 0usize;
-    if !update_cache.is_empty() {
+    if update_cache.is_empty() {
+        to_process.extend(rpm_files.iter().cloned());
+    } else {
         for rpm_path in &rpm_files {
-            if let Some(cached) = lookup_cached(&update_cache, rpm_path, repo_path, cli.skip_stat)
-            {
+            if let Some(cached) = lookup_cached(&update_cache, rpm_path, repo_path, cli.skip_stat) {
                 let mut pkg = cached.clone();
                 if let Some(limit) = changelog_limit {
                     pkg.changelogs.truncate(limit);
                 }
                 if let Some(ref db) = db {
                     if let Err(e) = db.insert_package(&pkg) {
-                        log!(&cli, LogLevel::Warning, "Warning: Failed to insert cached package {}: {}", pkg.name, e);
+                        log!(
+                            &cli,
+                            LogLevel::Warning,
+                            "Warning: Failed to insert cached package {}: {}",
+                            pkg.name,
+                            e
+                        );
                     }
                 }
                 packages.push(pkg);
@@ -268,8 +358,6 @@ fn main() -> ExitCode {
             cache_hits,
             to_process.len()
         );
-    } else {
-        to_process.extend(rpm_files.iter().cloned());
     }
 
     let rpm_files = to_process;
@@ -281,7 +369,12 @@ fn main() -> ExitCode {
                 let _ = std::fs::remove_dir_all(&repodata_tmp);
                 return ExitCode::from(130);
             }
-            log!(&cli, LogLevel::Verbose, "Processing: {}", rpm_path.display());
+            log!(
+                &cli,
+                LogLevel::Verbose,
+                "Processing: {}",
+                rpm_path.display()
+            );
             match createrepo_rs::rpm::RpmReader::open(rpm_path) {
                 Ok(mut reader) => {
                     match reader.read_package() {
@@ -293,20 +386,38 @@ fn main() -> ExitCode {
                             }
                             if let Some(ref db) = db {
                                 if let Err(e) = db.insert_package(&pkg) {
-                                    log!(&cli, LogLevel::Warning, "Warning: Failed to insert package {}: {}", pkg.name, e);
-    }
-}
+                                    log!(
+                                        &cli,
+                                        LogLevel::Warning,
+                                        "Warning: Failed to insert package {}: {}",
+                                        pkg.name,
+                                        e
+                                    );
+                                }
+                            }
 
                             packages.push(pkg);
                         }
                         Err(e) => {
-                            log!(&cli, LogLevel::Warning, "Warning: Failed to read package {}: {}", rpm_path.display(), e);
+                            log!(
+                                &cli,
+                                LogLevel::Warning,
+                                "Warning: Failed to read package {}: {}",
+                                rpm_path.display(),
+                                e
+                            );
                             errors += 1;
                         }
                     }
                 }
                 Err(e) => {
-                    log!(&cli, LogLevel::Warning, "Warning: Failed to open package {}: {}", rpm_path.display(), e);
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: Failed to open package {}: {}",
+                        rpm_path.display(),
+                        e
+                    );
                     errors += 1;
                 }
             }
@@ -317,7 +428,8 @@ fn main() -> ExitCode {
         let (mut pool, receiver) = createrepo_rs::pool::WorkerPool::new(num_workers);
 
         for rpm_path in &rpm_files {
-            pool.submit(createrepo_rs::pool::Job::ProcessPackage(rpm_path.clone()));
+            let _submit_ok =
+                pool.submit(createrepo_rs::pool::Job::ProcessPackage(rpm_path.clone()));
         }
 
         let total_jobs = rpm_files.len();
@@ -338,13 +450,25 @@ fn main() -> ExitCode {
                     }
                     if let Some(ref db) = db {
                         if let Err(e) = db.insert_package(&pkg) {
-                            log!(&cli, LogLevel::Warning, "Warning: Failed to insert package {}: {}", pkg.name, e);
+                            log!(
+                                &cli,
+                                LogLevel::Warning,
+                                "Warning: Failed to insert package {}: {}",
+                                pkg.name,
+                                e
+                            );
                         }
                     }
                     packages.push(pkg);
                 }
                 createrepo_rs::pool::ProcessingResult::Error(path, err) => {
-                    log!(&cli, LogLevel::Warning, "Warning: Failed to process {}: {}", path.display(), err);
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: Failed to process {}: {}",
+                        path.display(),
+                        err
+                    );
                     errors += 1;
                 }
             }
@@ -358,22 +482,44 @@ fn main() -> ExitCode {
 
     if let Some(db) = db {
         if let Err(e) = db.finish() {
-            log!(&cli, LogLevel::Warning, "Warning: Failed to finalize database: {}", e);
+            log!(
+                &cli,
+                LogLevel::Warning,
+                "Warning: Failed to finalize database: {}",
+                e
+            );
         }
     }
 
-    log!(&cli, LogLevel::Normal, "Successfully processed {} packages ({} errors)", packages.len(), errors);
+    log!(
+        &cli,
+        LogLevel::Normal,
+        "Successfully processed {} packages ({} errors)",
+        packages.len(),
+        errors
+    );
 
     if let Some(ref read_pkgs_list_path) = cli.read_pkgs_list {
-        let pkg_paths: Vec<String> = packages.iter()
+        let pkg_paths: Vec<String> = packages
+            .iter()
             .filter_map(|p| p.location_href.clone())
             .collect();
         match std::fs::write(read_pkgs_list_path, pkg_paths.join("\n")) {
-            Ok(_) => {
-                log!(&cli, LogLevel::Normal, "Wrote package list to {}", read_pkgs_list_path.display());
+            Ok(()) => {
+                log!(
+                    &cli,
+                    LogLevel::Normal,
+                    "Wrote package list to {}",
+                    read_pkgs_list_path.display()
+                );
             }
             Err(e) => {
-                log!(&cli, LogLevel::Warning, "Warning: Failed to write package list: {}", e);
+                log!(
+                    &cli,
+                    LogLevel::Warning,
+                    "Warning: Failed to write package list: {}",
+                    e
+                );
             }
         }
     }
@@ -404,7 +550,7 @@ fn main() -> ExitCode {
     if let Some(ref prefix) = cli.location_prefix {
         for pkg in &mut packages {
             if let Some(ref href) = pkg.location_href {
-                pkg.location_href = Some(format!("{}/{}", prefix, href));
+                pkg.location_href = Some(format!("{prefix}/{href}"));
             }
         }
     }
@@ -424,15 +570,30 @@ fn main() -> ExitCode {
             match policy.as_str() {
                 "error" => {
                     for dup in &duplicates {
-                        log!(&cli, LogLevel::Error, "Error: Duplicate NEVRA found: {}", dup);
+                        log!(
+                            &cli,
+                            LogLevel::Error,
+                            "Error: Duplicate NEVRA found: {}",
+                            dup
+                        );
                     }
                     return ExitCode::from(1);
                 }
                 "keep-latest" => {
-                    log!(&cli, LogLevel::Warning, "Warning: {} duplicate NEVRA(s) found (keeping first occurrence)", duplicates.len());
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: {} duplicate NEVRA(s) found (keeping first occurrence)",
+                        duplicates.len()
+                    );
                 }
                 _ => {
-                    log!(&cli, LogLevel::Warning, "Warning: {} duplicate NEVRA(s) found (keeping first, removing rest)", duplicates.len());
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: {} duplicate NEVRA(s) found (keeping first, removing rest)",
+                        duplicates.len()
+                    );
                 }
             }
         }
@@ -461,7 +622,8 @@ fn main() -> ExitCode {
         TypesCompression::None => "",
     };
 
-    let unique_md_filenames = cli.unique_md_filenames && !cli.simple_md_filenames && !cli.compatibility;
+    let unique_md_filenames =
+        cli.unique_md_filenames && !cli.simple_md_filenames && !cli.compatibility;
 
     let pretty = cli.pretty && !cli.no_pretty;
 
@@ -483,12 +645,12 @@ fn main() -> ExitCode {
     };
     let primary_checksum_uncompressed = compute_checksum(&primary_xml, repomd_checksum_type);
     let (primary_filename, primary_location) = if unique_md_filenames {
-        let filename = format!("{}-primary.xml{}", repomd_checksum_type, compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("{repomd_checksum_type}-primary.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     } else {
-        let filename = format!("primary.xml{}", compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("primary.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     };
     let primary_path = repodata_tmp.join(&primary_filename);
@@ -503,40 +665,54 @@ fn main() -> ExitCode {
     let primary_checksum = compute_checksum(&primary_compressed, repomd_checksum_type);
     let primary_size = primary_path.metadata().map(|m| m.len() as i64).ok();
     let primary_timestamp = primary_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs() as i64))
+        m.modified().ok().and_then(|t| {
+            t.duration_since(UNIX_EPOCH)
+                .ok()
+                .map(|d| d.as_secs() as i64)
+        })
     });
 
     // Generate filelists.xml
     let filelists_xml = match dump::filelists::dump_filelists_xml(&packages, false, pretty) {
         Ok(xml) => xml,
         Err(e) => {
-            log!(&cli, LogLevel::Error, "Error generating filelists.xml: {}", e);
+            log!(
+                &cli,
+                LogLevel::Error,
+                "Error generating filelists.xml: {}",
+                e
+            );
             return ExitCode::from(1);
         }
     };
     let filelists_checksum_uncompressed = compute_checksum(&filelists_xml, repomd_checksum_type);
     let (filelists_filename, filelists_location) = if unique_md_filenames {
-        let filename = format!("{}-filelists.xml{}", repomd_checksum_type, compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("{repomd_checksum_type}-filelists.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     } else {
-        let filename = format!("filelists.xml{}", compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("filelists.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     };
     let filelists_path = repodata_tmp.join(&filelists_filename);
     log!(&cli, LogLevel::Normal, "Writing filelists.xml...");
-    let filelists_compressed = match write_compressed(&filelists_xml, &filelists_path, xml_compression) {
-        Ok(data) => data,
-        Err(e) => {
-            log!(&cli, LogLevel::Error, "Error writing filelists.xml: {}", e);
-            return ExitCode::from(1);
-        }
-    };
+    let filelists_compressed =
+        match write_compressed(&filelists_xml, &filelists_path, xml_compression) {
+            Ok(data) => data,
+            Err(e) => {
+                log!(&cli, LogLevel::Error, "Error writing filelists.xml: {}", e);
+                return ExitCode::from(1);
+            }
+        };
     let filelists_checksum = compute_checksum(&filelists_compressed, repomd_checksum_type);
     let filelists_size = filelists_path.metadata().map(|m| m.len() as i64).ok();
     let filelists_timestamp = filelists_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs() as i64))
+        m.modified().ok().and_then(|t| {
+            t.duration_since(UNIX_EPOCH)
+                .ok()
+                .map(|d| d.as_secs() as i64)
+        })
     });
 
     // Generate other.xml
@@ -549,12 +725,12 @@ fn main() -> ExitCode {
     };
     let other_checksum_uncompressed = compute_checksum(&other_xml, repomd_checksum_type);
     let (other_filename, other_location) = if unique_md_filenames {
-        let filename = format!("{}-other.xml{}", repomd_checksum_type, compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("{repomd_checksum_type}-other.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     } else {
-        let filename = format!("other.xml{}", compression_suffix);
-        let location = format!("repodata/{}", filename);
+        let filename = format!("other.xml{compression_suffix}");
+        let location = format!("repodata/{filename}");
         (filename, location)
     };
     let other_path = repodata_tmp.join(&other_filename);
@@ -569,7 +745,11 @@ fn main() -> ExitCode {
     let other_checksum = compute_checksum(&other_compressed, repomd_checksum_type);
     let other_size = other_path.metadata().map(|m| m.len() as i64).ok();
     let other_timestamp = other_path.metadata().ok().and_then(|m| {
-        m.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs() as i64))
+        m.modified().ok().and_then(|t| {
+            t.duration_since(UNIX_EPOCH)
+                .ok()
+                .map(|d| d.as_secs() as i64)
+        })
     });
 
     // Create repomd records
@@ -586,7 +766,7 @@ fn main() -> ExitCode {
     let filelists_record = RepomdRecord {
         record_type: "filelists".to_string(),
         location: filelists_location,
-        checksum: Some(filelists_checksum.clone()),
+        checksum: Some(filelists_checksum),
         timestamp: override_timestamp.or(filelists_timestamp),
         size: filelists_size,
         open_size: Some(filelists_xml.len() as i64),
@@ -596,7 +776,7 @@ fn main() -> ExitCode {
     let other_record = RepomdRecord {
         record_type: "other".to_string(),
         location: other_location,
-        checksum: Some(other_checksum.clone()),
+        checksum: Some(other_checksum),
         timestamp: override_timestamp.or(other_timestamp),
         size: other_size,
         open_size: Some(other_xml.len() as i64),
@@ -627,32 +807,48 @@ fn main() -> ExitCode {
         let filelists_ext_xml = match dump::filelists::dump_filelists_xml(&packages, true, pretty) {
             Ok(xml) => xml,
             Err(e) => {
-                log!(&cli, LogLevel::Error, "Error generating filelists-ext.xml: {}", e);
+                log!(
+                    &cli,
+                    LogLevel::Error,
+                    "Error generating filelists-ext.xml: {}",
+                    e
+                );
                 return ExitCode::from(1);
             }
         };
         let (filelists_ext_filename, filelists_ext_location) = if unique_md_filenames {
-            let filename = format!("{}-filelists-ext.xml{}", repomd_checksum_type, compression_suffix);
-            let location = format!("repodata/{}", filename);
+            let filename = format!("{repomd_checksum_type}-filelists-ext.xml{compression_suffix}");
+            let location = format!("repodata/{filename}");
             (filename, location)
         } else {
-            let filename = format!("filelists-ext.xml{}", compression_suffix);
-            let location = format!("repodata/{}", filename);
+            let filename = format!("filelists-ext.xml{compression_suffix}");
+            let location = format!("repodata/{filename}");
             (filename, location)
         };
         let filelists_ext_path = repodata_tmp.join(&filelists_ext_filename);
         log!(&cli, LogLevel::Normal, "Writing filelists-ext.xml...");
-        let filelists_ext_compressed = match write_compressed(&filelists_ext_xml, &filelists_ext_path, xml_compression) {
-            Ok(data) => data,
-            Err(e) => {
-                log!(&cli, LogLevel::Error, "Error writing filelists-ext.xml: {}", e);
-                return ExitCode::from(1);
-            }
-        };
-        let filelists_ext_checksum = compute_checksum(&filelists_ext_compressed, repomd_checksum_type);
+        let filelists_ext_compressed =
+            match write_compressed(&filelists_ext_xml, &filelists_ext_path, xml_compression) {
+                Ok(data) => data,
+                Err(e) => {
+                    log!(
+                        &cli,
+                        LogLevel::Error,
+                        "Error writing filelists-ext.xml: {}",
+                        e
+                    );
+                    return ExitCode::from(1);
+                }
+            };
+        let filelists_ext_checksum =
+            compute_checksum(&filelists_ext_compressed, repomd_checksum_type);
         let filelists_ext_size = filelists_ext_path.metadata().map(|m| m.len() as i64).ok();
         let filelists_ext_timestamp = filelists_ext_path.metadata().ok().and_then(|m| {
-            m.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs() as i64))
+            m.modified().ok().and_then(|t| {
+                t.duration_since(UNIX_EPOCH)
+                    .ok()
+                    .map(|d| d.as_secs() as i64)
+            })
         });
 
         filelists_ext_record = Some(RepomdRecord {
@@ -699,22 +895,35 @@ fn main() -> ExitCode {
 
     if cli.local_sqlite {
         if let Err(e) = copy_dir_all(&repodata_tmp, &repodata_dir) {
-            log!(&cli, LogLevel::Error, "Error copying repodata to output: {}", e);
+            log!(
+                &cli,
+                LogLevel::Error,
+                "Error copying repodata to output: {}",
+                e
+            );
             return ExitCode::from(1);
         }
         if let Err(e) = std::fs::remove_dir_all(&repodata_tmp) {
-            log!(&cli, LogLevel::Warning, "Warning: Failed to remove temp repodata: {}", e);
+            log!(
+                &cli,
+                LogLevel::Warning,
+                "Warning: Failed to remove temp repodata: {}",
+                e
+            );
         }
-    } else {
-        if let Err(e) = std::fs::rename(&repodata_tmp, &repodata_dir) {
-            log!(&cli, LogLevel::Error, "Error renaming temp repodata: {}", e);
-            return ExitCode::from(1);
-        }
+    } else if let Err(e) = std::fs::rename(&repodata_tmp, &repodata_dir) {
+        log!(&cli, LogLevel::Error, "Error renaming temp repodata: {}", e);
+        return ExitCode::from(1);
     }
 
     if repodata_old.exists() && !cli.retain_old_md {
         if let Err(e) = std::fs::remove_dir_all(&repodata_old) {
-            log!(&cli, LogLevel::Warning, "Warning: Failed to remove old repodata: {}", e);
+            log!(
+                &cli,
+                LogLevel::Warning,
+                "Warning: Failed to remove old repodata: {}",
+                e
+            );
         }
     }
 
@@ -722,7 +931,7 @@ fn main() -> ExitCode {
         if let Some(max_age) = parse_age_duration(age_str) {
             let cutoff = SystemTime::now() - max_age;
             if let Ok(entries) = std::fs::read_dir(&repodata_dir) {
-                for entry in entries.filter_map(|e| e.ok()) {
+                for entry in entries.filter_map(std::result::Result::ok) {
                     if let Ok(metadata) = entry.metadata() {
                         if let Ok(modified) = metadata.modified() {
                             if modified < cutoff {
@@ -765,21 +974,17 @@ fn write_compressed(
     output: &Path,
     compression: TypesCompression,
 ) -> Result<Vec<u8>, std::io::Error> {
-    use createrepo_rs::compression::{gzip_compress, bzip2_compress, zstd_compress, xz_compress};
+    use createrepo_rs::compression::{bzip2_compress, gzip_compress, xz_compress, zstd_compress};
 
     let data_to_write: Vec<u8> = match compression {
-        TypesCompression::Gzip => {
-            gzip_compress(content, 6).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        }
-        TypesCompression::Bzip2 => {
-            bzip2_compress(content, 6).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        }
-        TypesCompression::Xz => {
-            xz_compress(content, 6).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        }
-        TypesCompression::Zstd => {
-            zstd_compress(content, 6).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        }
+        TypesCompression::Gzip => gzip_compress(content, 6)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        TypesCompression::Bzip2 => bzip2_compress(content, 6)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        TypesCompression::Xz => xz_compress(content, 6)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        TypesCompression::Zstd => zstd_compress(content, 6)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
         TypesCompression::None => content.to_vec(),
     };
 
@@ -787,7 +992,7 @@ fn write_compressed(
     Ok(data_to_write)
 }
 
-fn convert_compression(cli_comp: createrepo_rs::cli::CompressionType) -> TypesCompression {
+const fn convert_compression(cli_comp: createrepo_rs::cli::CompressionType) -> TypesCompression {
     match cli_comp {
         createrepo_rs::cli::CompressionType::Gzip => TypesCompression::Gzip,
         createrepo_rs::cli::CompressionType::Bzip2 => TypesCompression::Bzip2,
@@ -800,7 +1005,7 @@ fn convert_compression(cli_comp: createrepo_rs::cli::CompressionType) -> TypesCo
 fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBuf>) -> Package {
     let location = rpm_pkg.location.clone();
 
-    // Calculate location_href based on basedir
+    // Calculate location_href based on basedir (clone once for this computation)
     let location_href = if let Some(ref bd) = basedir {
         // If basedir is provided, compute relative path
         let rpm_path = PathBuf::from(&location);
@@ -818,18 +1023,22 @@ fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBu
         location.clone()
     };
 
-    let convert_deps = |deps: Vec<createrepo_rs::rpm::DependencyInfo>| -> Vec<createrepo_rs::types::Dependency> {
-        deps.into_iter().map(|d| {
-            createrepo_rs::types::Dependency {
-                name: d.name,
-                epoch: d.epoch,
-                version: d.version,
-                release: d.release,
-                flags: d.flags,
-                pre: d.pre,
-            }
-        }).collect()
-    };
+    // Clone location once for filename, reuse original for location field
+    let filename = location.clone();
+
+    let convert_deps =
+        |deps: Vec<createrepo_rs::rpm::DependencyInfo>| -> Vec<createrepo_rs::types::Dependency> {
+            deps.into_iter()
+                .map(|d| createrepo_rs::types::Dependency {
+                    name: d.name,
+                    epoch: d.epoch,
+                    version: d.version,
+                    release: d.release,
+                    flags: d.flags,
+                    pre: d.pre,
+                })
+                .collect()
+        };
 
     let convert_changelogs = |entries: Vec<createrepo_rs::rpm::ChangelogInfo>| -> Vec<createrepo_rs::types::ChangelogEntry> {
         entries.into_iter().map(|e| {
@@ -848,8 +1057,8 @@ fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBu
         version: rpm_pkg.version,
         epoch: rpm_pkg.epoch.and_then(|e| e.parse().ok()),
         release: rpm_pkg.release,
-        filename: location.clone(),
-        location: location.clone(),
+        filename,
+        location,
         checksum_type: createrepo_rs::types::ChecksumType::Sha256,
         checksum: rpm_pkg.sha256,
         source_pkg: rpm_pkg.sourcerpm.clone(),
@@ -875,14 +1084,16 @@ fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBu
         enhances: convert_deps(rpm_pkg.enhances),
         recommends: convert_deps(rpm_pkg.recommends),
         supplements: convert_deps(rpm_pkg.supplements),
-        files: rpm_pkg.files.into_iter().map(|f| {
-            createrepo_rs::types::PackageFile {
+        files: rpm_pkg
+            .files
+            .into_iter()
+            .map(|f| createrepo_rs::types::PackageFile {
                 path: f.path,
                 file_type: f.file_type.unwrap_or_default(),
                 digest: f.digest,
                 size: 0,
-            }
-        }).collect(),
+            })
+            .collect(),
         changelogs: convert_changelogs(rpm_pkg.changelogs),
         location_href: Some(location_href),
         header_start: None,
@@ -943,11 +1154,18 @@ fn cut_directory_components(path: &str, count: usize) -> String {
 
 fn parse_age_duration(s: &str) -> Option<std::time::Duration> {
     if let Some(days) = s.strip_suffix('d') {
-        days.parse::<u64>().ok().map(|d| std::time::Duration::from_secs(d * 86400))
+        days.parse::<u64>()
+            .ok()
+            .map(|d| std::time::Duration::from_secs(d * 86400))
     } else if let Some(hours) = s.strip_suffix('h') {
-        hours.parse::<u64>().ok().map(|h| std::time::Duration::from_secs(h * 3600))
+        hours
+            .parse::<u64>()
+            .ok()
+            .map(|h| std::time::Duration::from_secs(h * 3600))
     } else if let Some(mins) = s.strip_suffix('m') {
-        mins.parse::<u64>().ok().map(|m| std::time::Duration::from_secs(m * 60))
+        mins.parse::<u64>()
+            .ok()
+            .map(|m| std::time::Duration::from_secs(m * 60))
     } else {
         None
     }
@@ -976,7 +1194,10 @@ mod tests {
     #[test]
     fn test_compute_sha256() {
         let result = compute_checksum(b"hello world", "sha256");
-        assert_eq!(result, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+        assert_eq!(
+            result,
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        );
     }
 
     #[test]

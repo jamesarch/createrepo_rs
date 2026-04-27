@@ -1,10 +1,13 @@
 //! Thread pool for parallel package processing.
 //!
 //! This module provides a worker pool for processing jobs in parallel using
-//! std::thread and crossbeam-channel.
+//! `std::thread` and crossbeam-channel.
 
 use crate::rpm::RpmReader;
-use crate::types::{ChecksumType, Dependency, Package as TypesPackage, PackageFile as TypesPackageFile, ChangelogEntry};
+use crate::types::{
+    ChangelogEntry, ChecksumType, Dependency, Package as TypesPackage,
+    PackageFile as TypesPackageFile,
+};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::path::PathBuf;
 use std::thread;
@@ -21,10 +24,11 @@ pub enum Job {
 
 impl Job {
     /// Returns the path associated with this job, if any.
-    pub fn path(&self) -> Option<&PathBuf> {
+    #[must_use]
+    pub const fn path(&self) -> Option<&PathBuf> {
         match self {
-            Job::ProcessPackage(p) => Some(p),
-            Job::Other(_) => None,
+            Self::ProcessPackage(p) => Some(p),
+            Self::Other(_) => None,
         }
     }
 }
@@ -57,6 +61,7 @@ pub struct WorkerPool {
 
 impl WorkerPool {
     /// Creates a new worker pool with the specified number of workers.
+    #[must_use]
     pub fn new(num_workers: usize) -> (Self, Receiver<ProcessingResult>) {
         let (job_sender, job_receiver) = bounded::<WorkerMessage>(num_workers * 2);
         let (result_sender, result_receiver) = bounded::<ProcessingResult>(num_workers * 2);
@@ -69,16 +74,18 @@ impl WorkerPool {
             let shutdown_flag = shutdown_flag.clone();
 
             let worker = thread::Builder::new()
-                .name(format!("worker-{}", id))
+                .name(format!("worker-{id}"))
                 .spawn(move || {
                     Self::worker_loop(id, receiver, result_sender, shutdown_flag);
                 })
-                .expect("failed to spawn worker thread");
+                .unwrap_or_else(|e| {
+                    panic!("failed to spawn worker thread: {e}");
+                });
 
             workers.push(worker);
         }
 
-        let pool = WorkerPool {
+        let pool = Self {
             workers,
             job_sender: Some(job_sender),
             shutdown_flag,
@@ -100,9 +107,10 @@ impl WorkerPool {
     ///
     /// Returns true if the job was submitted successfully, false if the pool
     /// has been shut down.
+    #[must_use]
     pub fn submit(&self, job: Job) -> bool {
         if let Some(ref sender) = self.job_sender {
-            sender.send(WorkerMessage::Job(job)).map(|_| true).is_ok()
+            sender.send(WorkerMessage::Job(job)).map(|()| true).is_ok()
         } else {
             false
         }
@@ -165,28 +173,29 @@ impl WorkerPool {
                 let mut reader = match RpmReader::open(&path) {
                     Ok(r) => r,
                     Err(e) => {
-                        return ProcessingResult::Error(path, format!("Failed to open RPM: {}", e));
+                        return ProcessingResult::Error(path, format!("Failed to open RPM: {e}"));
                     }
                 };
 
                 let rpm_pkg = match reader.read_package() {
                     Ok(p) => p,
                     Err(e) => {
-                        return ProcessingResult::Error(path, format!("Failed to read package: {}", e));
+                        return ProcessingResult::Error(
+                            path,
+                            format!("Failed to read package: {e}"),
+                        );
                     }
                 };
 
                 let pkg = convert_package(rpm_pkg);
                 ProcessingResult::Success(path, pkg)
             }
-            Job::Other(_msg) => {
-                ProcessingResult::Success(PathBuf::new(), TypesPackage::default())
-            }
+            Job::Other(_msg) => ProcessingResult::Success(PathBuf::new(), TypesPackage::default()),
         }
     }
 }
 
-/// Converts an rpm::Package to a types::Package.
+/// Converts an `rpm::Package` to a `types::Package`.
 fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
     let location = rpm_pkg.location.clone();
     TypesPackage {
@@ -215,83 +224,121 @@ fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
         group: rpm_pkg.group,
         buildhost: rpm_pkg.buildhost,
         sourcerpm: rpm_pkg.sourcerpm,
-        requires: rpm_pkg.requires.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        provides: rpm_pkg.provides.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        conflicts: rpm_pkg.conflicts.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        obsoletes: rpm_pkg.obsoletes.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        suggests: rpm_pkg.suggests.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        enhances: rpm_pkg.enhances.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        recommends: rpm_pkg.recommends.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        supplements: rpm_pkg.supplements.into_iter().map(|d| Dependency {
-            name: d.name,
-            epoch: d.epoch,
-            version: d.version,
-            release: d.release,
-            flags: d.flags,
-            pre: d.pre,
-        }).collect(),
-        files: rpm_pkg.files.into_iter().map(|f| {
-            TypesPackageFile {
+        requires: rpm_pkg
+            .requires
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        provides: rpm_pkg
+            .provides
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        conflicts: rpm_pkg
+            .conflicts
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        obsoletes: rpm_pkg
+            .obsoletes
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        suggests: rpm_pkg
+            .suggests
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        enhances: rpm_pkg
+            .enhances
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        recommends: rpm_pkg
+            .recommends
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        supplements: rpm_pkg
+            .supplements
+            .into_iter()
+            .map(|d| Dependency {
+                name: d.name,
+                epoch: d.epoch,
+                version: d.version,
+                release: d.release,
+                flags: d.flags,
+                pre: d.pre,
+            })
+            .collect(),
+        files: rpm_pkg
+            .files
+            .into_iter()
+            .map(|f| TypesPackageFile {
                 path: f.path,
                 file_type: f.file_type.unwrap_or_default(),
                 digest: f.digest,
                 size: 0,
-            }
-        }).collect(),
-        changelogs: rpm_pkg.changelogs.into_iter().map(|c| ChangelogEntry {
-            author: c.author,
-            date: c.date,
-            content: c.content,
-        }).collect(),
+            })
+            .collect(),
+        changelogs: rpm_pkg
+            .changelogs
+            .into_iter()
+            .map(|c| ChangelogEntry {
+                author: c.author,
+                date: c.date,
+                content: c.content,
+            })
+            .collect(),
         location_href: Some(location),
         header_start: None,
         header_end: None,

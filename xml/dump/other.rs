@@ -1,10 +1,10 @@
 use std::io::Write;
 use std::path::Path;
 
-use quick_xml::events::{BytesEnd, BytesDecl, BytesStart, BytesText, Event};
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
 
-use crate::compression::{gzip_compress, bzip2_compress, zstd_compress, xz_compress};
+use crate::compression::{bzip2_compress, gzip_compress, xz_compress, zstd_compress};
 use crate::types::{ChangelogEntry, CompressionType, Package};
 use crate::xml::error::XmlError;
 
@@ -42,11 +42,11 @@ pub fn dump_other(
 ) -> Result<(), XmlError> {
     let xml_content = dump_other_xml(packages, pretty)?;
 
-    if compression != CompressionType::None {
+    if compression == CompressionType::None {
+        std::fs::write(output, xml_content)?;
+    } else {
         let compressed = compress_bytes(&xml_content, compression)?;
         std::fs::write(output, compressed)?;
-    } else {
-        std::fs::write(output, xml_content)?;
     }
 
     Ok(())
@@ -99,14 +99,10 @@ fn write_changelog_elements<W: Write>(
 
 fn compress_bytes(content: &[u8], compression: CompressionType) -> Result<Vec<u8>, XmlError> {
     match compression {
-        CompressionType::Gzip => gzip_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Bzip2 => bzip2_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Xz => xz_compress(content, 6)
-            .map_err(XmlError::IoError),
-        CompressionType::Zstd => zstd_compress(content, 6)
-            .map_err(XmlError::IoError),
+        CompressionType::Gzip => gzip_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Bzip2 => bzip2_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Xz => xz_compress(content, 6).map_err(XmlError::IoError),
+        CompressionType::Zstd => zstd_compress(content, 6).map_err(XmlError::IoError),
         CompressionType::None => Ok(content.to_vec()),
     }
 }

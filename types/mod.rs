@@ -4,8 +4,7 @@
 //! for working with RPM package metadata.
 
 /// Checksum type used for package verification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChecksumType {
     Md5,
     Sha1,
@@ -17,10 +16,8 @@ pub enum ChecksumType {
     Unknown,
 }
 
-
 /// Compression type used for metadata files.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompressionType {
     Gzip,
     Bzip2,
@@ -30,10 +27,8 @@ pub enum CompressionType {
     None,
 }
 
-
 /// Represents an RPM dependency.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dependency {
     /// Name of the dependency.
     pub name: String,
@@ -49,10 +44,8 @@ pub struct Dependency {
     pub pre: bool,
 }
 
-
 /// Represents a changelog entry for a package.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ChangelogEntry {
     /// Author of the changelog entry.
     pub author: String,
@@ -62,10 +55,8 @@ pub struct ChangelogEntry {
     pub content: String,
 }
 
-
 /// Represents a file within a package.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PackageFile {
     /// Path to the file.
     pub path: String,
@@ -77,13 +68,11 @@ pub struct PackageFile {
     pub size: i64,
 }
 
-
 /// Represents a complete RPM package metadata.
 ///
 /// This structure replaces the C `cr_Package` FFI type with
 /// a safe, idiomatic Rust representation.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Package {
     // Identification
     /// Package identifier (hex MD5).
@@ -182,10 +171,8 @@ pub struct Package {
     pub header_end: Option<i64>,
 }
 
-
 /// Represents a record within a repomd repository.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RepomdRecord {
     pub record_type: String,
     pub location: String,
@@ -197,7 +184,6 @@ pub struct RepomdRecord {
     #[doc(hidden)]
     pub checksum_type: Option<String>,
 }
-
 
 /// A distribution tag for the repository.
 #[derive(Debug, Clone)]
@@ -226,8 +212,7 @@ pub struct RepoTag {
 ///
 /// Contains revision information and a collection of records
 /// pointing to various metadata files.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Repomd {
     pub revision: Option<String>,
     pub records: Vec<RepomdRecord>,
@@ -235,7 +220,6 @@ pub struct Repomd {
     pub content_tags: Vec<ContentTag>,
     pub repo_tags: Vec<RepoTag>,
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -319,7 +303,7 @@ mod tests {
             epoch: Some(0),
             release: "1".to_string(),
             filename: "test-1.0-1.x86_64.rpm".to_string(),
-            location: "".to_string(),
+            location: String::new(),
             checksum_type: ChecksumType::Sha256,
             checksum: "def456".to_string(),
             source_pkg: None,
@@ -351,7 +335,7 @@ mod tests {
             header_start: Some(100),
             header_end: Some(200),
         };
-        let cloned = pkg.clone();
+        let cloned = pkg;
         assert_eq!(cloned.pkgid, "abc123");
         assert_eq!(cloned.name, "test");
         assert_eq!(cloned.requires.len(), 1);

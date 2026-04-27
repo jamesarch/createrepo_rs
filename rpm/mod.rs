@@ -1,7 +1,7 @@
+use rpm as rpm_crate;
+use sha2::{Digest, Sha256};
 use std::path::Path;
 use thiserror::Error;
-use sha2::{Sha256, Digest};
-use rpm as rpm_crate;
 
 #[derive(Error, Debug)]
 pub enum RpmError {
@@ -102,7 +102,8 @@ fn convert_dependency_flags(flags: rpm_crate::DependencyFlags) -> String {
         10 => "LE",
         12 => "GE",
         _ => "",
-    }.to_string()
+    }
+    .to_string()
 }
 
 fn convert_file_mode(mode: rpm_crate::FileMode) -> String {
@@ -123,7 +124,7 @@ impl RpmReader {
                 path.display()
             )));
         }
-        Ok(RpmReader {
+        Ok(Self {
             path: path.to_path_buf(),
         })
     }
@@ -132,45 +133,40 @@ impl RpmReader {
         let metadata = rpm_crate::PackageMetadata::open(&self.path)
             .map_err(|e| RpmError::OpenError(e.to_string()))?;
 
-        let name = metadata.get_name()
+        let name = metadata
+            .get_name()
             .map_err(|e| RpmError::MetadataError(e.to_string()))?
             .to_string();
-        let version = metadata.get_version()
+        let version = metadata
+            .get_version()
             .map_err(|e| RpmError::MetadataError(e.to_string()))?
             .to_string();
-        let release = metadata.get_release()
+        let release = metadata
+            .get_release()
             .map_err(|e| RpmError::MetadataError(e.to_string()))?
             .to_string();
-        let arch = metadata.get_arch()
+        let arch = metadata
+            .get_arch()
             .map_err(|e| RpmError::MetadataError(e.to_string()))?
             .to_string();
 
-        let epoch = metadata.get_epoch()
-            .map(|e| e.to_string())
-            .ok();
-        let time_build = metadata.get_build_time()
-            .map(|t| t as i64)
-            .unwrap_or(0);
+        let epoch = metadata.get_epoch().map(|e| e.to_string()).ok();
+        let time_build = metadata.get_build_time().map_or(0, |t| t as i64);
 
         let file_meta = std::fs::metadata(&self.path).ok();
-        let file_size = file_meta
-            .as_ref()
-            .map(|m| m.len() as i64)
-            .unwrap_or(0);
+        let file_size = file_meta.as_ref().map_or(0, |m| m.len() as i64);
         let time_file = file_meta
             .as_ref()
             .and_then(|m| m.modified().ok())
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(time_build);
+            .map_or(time_build, |d| d.as_secs() as i64);
 
-        let location = self.path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| self.path.to_string_lossy().to_string());
+        let location = self.path.file_name().map_or_else(
+            || self.path.to_string_lossy().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
 
-        let file_entries = metadata.get_file_entries()
-            .unwrap_or_default();
+        let file_entries = metadata.get_file_entries().unwrap_or_default();
         let files: Vec<PackageFile> = file_entries
             .into_iter()
             .map(|entry| PackageFile {
@@ -182,35 +178,45 @@ impl RpmReader {
 
         let sha256 = compute_sha256(&self.path)?;
 
-        let summary = metadata.get_summary()
-            .map(|s| s.to_string())
+        let summary = metadata
+            .get_summary()
+            .map(std::string::ToString::to_string)
             .ok();
-        let description = metadata.get_description()
-            .map(|d| d.to_string())
+        let description = metadata
+            .get_description()
+            .map(std::string::ToString::to_string)
             .ok();
-        let packager = metadata.get_packager()
-            .map(|p| p.to_string())
+        let packager = metadata
+            .get_packager()
+            .map(std::string::ToString::to_string)
             .ok();
-        let url = metadata.get_url()
-            .map(|u| u.to_string())
+        let url = metadata
+            .get_url()
+            .map(std::string::ToString::to_string)
             .ok();
-        let license = metadata.get_license()
-            .map(|l| l.to_string())
+        let license = metadata
+            .get_license()
+            .map(std::string::ToString::to_string)
             .ok();
-        let vendor = metadata.get_vendor()
-            .map(|v| v.to_string())
+        let vendor = metadata
+            .get_vendor()
+            .map(std::string::ToString::to_string)
             .ok();
-        let group = metadata.get_group()
-            .map(|g| g.to_string())
+        let group = metadata
+            .get_group()
+            .map(std::string::ToString::to_string)
             .ok();
-        let buildhost = metadata.get_build_host()
-            .map(|b| b.to_string())
+        let buildhost = metadata
+            .get_build_host()
+            .map(std::string::ToString::to_string)
             .ok();
-        let sourcerpm = metadata.get_source_rpm()
-            .map(|s| s.to_string())
+        let sourcerpm = metadata
+            .get_source_rpm()
+            .map(std::string::ToString::to_string)
             .ok();
 
-        let provides = metadata.get_provides()
+        let provides = metadata
+            .get_provides()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -224,7 +230,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -238,7 +244,8 @@ impl RpmReader {
             })
             .collect();
 
-        let requires = metadata.get_requires()
+        let requires = metadata
+            .get_requires()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -251,7 +258,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -265,7 +272,8 @@ impl RpmReader {
             })
             .collect();
 
-        let conflicts = metadata.get_conflicts()
+        let conflicts = metadata
+            .get_conflicts()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -278,7 +286,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -292,7 +300,8 @@ impl RpmReader {
             })
             .collect();
 
-        let obsoletes = metadata.get_obsoletes()
+        let obsoletes = metadata
+            .get_obsoletes()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -305,7 +314,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -319,7 +328,8 @@ impl RpmReader {
             })
             .collect();
 
-        let suggests = metadata.get_suggests()
+        let suggests = metadata
+            .get_suggests()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -332,7 +342,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -346,7 +356,8 @@ impl RpmReader {
             })
             .collect();
 
-        let enhances = metadata.get_enhances()
+        let enhances = metadata
+            .get_enhances()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -359,7 +370,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -373,7 +384,8 @@ impl RpmReader {
             })
             .collect();
 
-        let recommends = metadata.get_recommends()
+        let recommends = metadata
+            .get_recommends()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -386,7 +398,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -400,7 +412,8 @@ impl RpmReader {
             })
             .collect();
 
-        let supplements = metadata.get_supplements()
+        let supplements = metadata
+            .get_supplements()
             .unwrap_or_default()
             .into_iter()
             .map(|dep| {
@@ -413,7 +426,7 @@ impl RpmReader {
                             Some(dep.version[..pos].to_string()),
                             Some(dep.version[pos + 1..].to_string()),
                         ),
-                        None => (Some(dep.version.to_string()), None),
+                        None => (Some(dep.version.clone()), None),
                     }
                 };
                 DependencyInfo {
@@ -427,7 +440,8 @@ impl RpmReader {
             })
             .collect();
 
-        let changelogs = metadata.get_changelog_entries()
+        let changelogs = metadata
+            .get_changelog_entries()
             .unwrap_or_default()
             .into_iter()
             .map(|entry| ChangelogInfo {
@@ -475,6 +489,7 @@ impl RpmReader {
         compute_sha256(&self.path)
     }
 
+    #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -492,5 +507,5 @@ fn compute_sha256(path: &Path) -> Result<String, RpmError> {
         hasher.update(&buffer[..bytes_read]);
     }
     let result = hasher.finalize();
-    Ok(format!("{:x}", result))
+    Ok(format!("{result:x}"))
 }

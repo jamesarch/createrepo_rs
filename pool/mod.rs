@@ -226,12 +226,28 @@ fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
         sourcerpm: rpm_pkg.sourcerpm,
         requires: rpm_pkg.requires.into_iter().map(Dependency::from).collect(),
         provides: rpm_pkg.provides.into_iter().map(Dependency::from).collect(),
-        conflicts: rpm_pkg.conflicts.into_iter().map(Dependency::from).collect(),
-        obsoletes: rpm_pkg.obsoletes.into_iter().map(Dependency::from).collect(),
+        conflicts: rpm_pkg
+            .conflicts
+            .into_iter()
+            .map(Dependency::from)
+            .collect(),
+        obsoletes: rpm_pkg
+            .obsoletes
+            .into_iter()
+            .map(Dependency::from)
+            .collect(),
         suggests: rpm_pkg.suggests.into_iter().map(Dependency::from).collect(),
         enhances: rpm_pkg.enhances.into_iter().map(Dependency::from).collect(),
-        recommends: rpm_pkg.recommends.into_iter().map(Dependency::from).collect(),
-        supplements: rpm_pkg.supplements.into_iter().map(Dependency::from).collect(),
+        recommends: rpm_pkg
+            .recommends
+            .into_iter()
+            .map(Dependency::from)
+            .collect(),
+        supplements: rpm_pkg
+            .supplements
+            .into_iter()
+            .map(Dependency::from)
+            .collect(),
         files: rpm_pkg
             .files
             .into_iter()
@@ -242,7 +258,11 @@ fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
                 size: 0,
             })
             .collect(),
-        changelogs: rpm_pkg.changelogs.into_iter().map(ChangelogEntry::from).collect(),
+        changelogs: rpm_pkg
+            .changelogs
+            .into_iter()
+            .map(ChangelogEntry::from)
+            .collect(),
         location_href: Some(location),
         header_start: None,
         header_end: None,

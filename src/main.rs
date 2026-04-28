@@ -973,14 +973,10 @@ fn write_compressed(
     use createrepo_rs::compression::{bzip2_compress, gzip_compress, xz_compress, zstd_compress};
 
     let data_to_write: Vec<u8> = match compression {
-        TypesCompression::Gzip => gzip_compress(content, 6)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
-        TypesCompression::Bzip2 => bzip2_compress(content, 6)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
-        TypesCompression::Xz => xz_compress(content, 6)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
-        TypesCompression::Zstd => zstd_compress(content, 6)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        TypesCompression::Gzip => gzip_compress(content, 6)?,
+        TypesCompression::Bzip2 => bzip2_compress(content, 6)?,
+        TypesCompression::Xz => xz_compress(content, 6)?,
+        TypesCompression::Zstd => zstd_compress(content, 6)?,
         TypesCompression::None => content.to_vec(),
     };
 

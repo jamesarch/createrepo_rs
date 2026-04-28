@@ -167,7 +167,9 @@ cargo build
 # Release build
 cargo build --release
 
-# Linux static binary (musl)
+# Linux static binary (musl) — requires Zig
+# Install: https://ziglang.org/download/
+# Then: cargo install cargo-zigbuild
 cargo zigbuild --release --target x86_64-unknown-linux-musl
 
 # Cross-compile for ARM
@@ -201,5 +203,6 @@ Original C implementation: [rpm-software-management/createrepo_c](https://github
 
 Built with:
 - [rpm-rs/rpm](https://github.com/rpm-rs/rpm) — Pure Rust RPM parser
+- [dralley/rpmrepo_metadata](https://github.com/dralley/rpmrepo_metadata) — EVR parsing reference (by [@dralley](https://github.com/dralley) at Red Hat)
 - [quick-xml](https://github.com/tafia/quick-xml) — Fast XML writer
 - [rusqlite](https://github.com/rusqlite/rusqlite) — SQLite bindings

@@ -85,6 +85,39 @@ pub struct RpmReader {
     path: std::path::PathBuf,
 }
 
+/// Parse an RPM dependency version string into (epoch, version, release).
+///
+/// RPM dependency versions follow the format `[epoch:]version[-release]`.
+/// Examples:
+/// - `"1.2.3"` → `(None, "1.2.3", None)`
+/// - `"1.2.3-4"` → `(None, "1.2.3", "4")`
+/// - `"0:1.2.3-4"` → `(Some(0), "1.2.3", "4")`
+/// - `"5:3.14"` → `(Some(5), "3.14", None)`
+fn parse_dep_version(raw: &str) -> (Option<i32>, Option<String>, Option<String>) {
+    if raw.is_empty() {
+        return (None, None, None);
+    }
+
+    let (epoch, rest) = if let Some(colon_pos) = raw.find(':') {
+        let epoch_str = &raw[..colon_pos];
+        let epoch_val = epoch_str.parse::<i32>().ok();
+        (epoch_val, &raw[colon_pos + 1..])
+    } else {
+        (None, raw)
+    };
+
+    let (version, release) = match rest.rfind('-') {
+        Some(pos) => (
+            Some(rest[..pos].to_string()),
+            Some(rest[pos + 1..].to_string()),
+        ),
+        None if !rest.is_empty() => (Some(rest.to_string()), None),
+        None => (None, None),
+    };
+
+    (epoch, version, release)
+}
+
 fn convert_dependency_flags(flags: rpm_crate::DependencyFlags) -> String {
     // C version: cr_flag_to_str(flags & 0xf)
     //  0 -> ""
@@ -250,21 +283,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -278,21 +301,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -306,21 +319,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -334,21 +337,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -362,21 +355,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -390,21 +373,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -418,21 +391,11 @@ impl RpmReader {
             .into_iter()
             .map(|dep| {
                 let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
+                let (epoch, version, release) = parse_dep_version(&dep.version);
                 DependencyInfo {
                     name: dep.name,
                     flags: flags_str,
-                    epoch: None,
+                    epoch,
                     version,
                     release,
                     pre: false,
@@ -508,4 +471,62 @@ fn compute_sha256(path: &Path) -> Result<String, RpmError> {
     }
     let result = hasher.finalize();
     Ok(format!("{result:x}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_dep_version_empty() {
+        assert_eq!(parse_dep_version(""), (None, None, None));
+    }
+
+    #[test]
+    fn test_parse_dep_version_no_release() {
+        assert_eq!(
+            parse_dep_version("1.2.3"),
+            (None, Some("1.2.3".into()), None)
+        );
+    }
+
+    #[test]
+    fn test_parse_dep_version_with_release() {
+        assert_eq!(
+            parse_dep_version("1.2.3-4"),
+            (None, Some("1.2.3".into()), Some("4".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_dep_version_with_epoch() {
+        assert_eq!(
+            parse_dep_version("0:1.2.3-4"),
+            (Some(0), Some("1.2.3".into()), Some("4".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_dep_version_epoch_only() {
+        assert_eq!(
+            parse_dep_version("5:3.14"),
+            (Some(5), Some("3.14".into()), None)
+        );
+    }
+
+    #[test]
+    fn test_parse_dep_version_multiple_hyphens() {
+        assert_eq!(
+            parse_dep_version("1.2.3-rc1-5"),
+            (None, Some("1.2.3-rc1".into()), Some("5".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_dep_version_hyphen_in_epoch() {
+        assert_eq!(
+            parse_dep_version("3:1.2.3-4"),
+            (Some(3), Some("1.2.3".into()), Some("4".into()))
+        );
+    }
 }

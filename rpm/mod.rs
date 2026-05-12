@@ -93,7 +93,7 @@ pub struct RpmReader {
 /// - `"1.2.3-4"` → `(None, "1.2.3", "4")`
 /// - `"0:1.2.3-4"` → `(Some(0), "1.2.3", "4")`
 /// - `"5:3.14"` → `(Some(5), "3.14", None)`
-fn parse_dep_version(raw: &str) -> (Option<i32>, Option<String>, Option<String>) {
+pub fn parse_dep_version(raw: &str) -> (Option<i32>, Option<String>, Option<String>) {
     if raw.is_empty() {
         return (None, None, None);
     }

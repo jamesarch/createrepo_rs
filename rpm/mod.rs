@@ -41,6 +41,14 @@ pub struct ChangelogInfo {
     pub content: String,
 }
 
+/// Lightweight manifest entry — just the fields needed for `--dump-manifest`.
+pub struct ManifestEntry {
+    pub name: String,
+    pub version: String,
+    pub arch: String,
+    pub signed: bool,
+}
+
 pub struct PackageFile {
     pub path: String,
     pub file_type: Option<String>,
@@ -342,6 +350,46 @@ impl RpmReader {
             || metadata
                 .signature
                 .entry_is_present(IndexSignatureTag::RPMSIGTAG_DSA)
+    }
+
+    /// Read only manifest fields (name, version, arch, signed).
+    ///
+    /// Much faster than [`read_package`](Self::read_package) — skips file
+    /// lists, dependencies, changelogs, and checksum computation.
+    pub fn read_manifest_entry(&mut self) -> Result<ManifestEntry, RpmError> {
+        let metadata = rpm_crate::PackageMetadata::open(&self.path)
+            .map_err(|e| RpmError::OpenError(e.to_string()))?;
+
+        let name = metadata
+            .get_name()
+            .map_err(|e| RpmError::MetadataError(e.to_string()))?
+            .to_string();
+        let version = metadata
+            .get_version()
+            .map_err(|e| RpmError::MetadataError(e.to_string()))?
+            .to_string();
+        let arch = metadata
+            .get_arch()
+            .map_err(|e| RpmError::MetadataError(e.to_string()))?
+            .to_string();
+
+        use rpm_crate::IndexSignatureTag;
+        let signed = metadata
+            .signature
+            .entry_is_present(IndexSignatureTag::RPMSIGTAG_PGP)
+            || metadata
+                .signature
+                .entry_is_present(IndexSignatureTag::RPMSIGTAG_RSA)
+            || metadata
+                .signature
+                .entry_is_present(IndexSignatureTag::RPMSIGTAG_DSA);
+
+        Ok(ManifestEntry {
+            name,
+            version,
+            arch,
+            signed,
+        })
     }
 
     #[must_use]

@@ -1217,10 +1217,10 @@ fn parse_age_duration(s: &str) -> Option<std::time::Duration> {
 }
 
 /// Walk the repository directory and dump a JSON-lines manifest of every
-/// RPM found.  Each line contains the package name, version, arch, and
-/// whether the package is cryptographically signed.
+/// RPM found, using parallel workers for speed.
 fn dump_manifest(cli: &Cli) -> ExitCode {
     use createrepo_rs::rpm::RpmReader;
+    use crossbeam_channel::bounded;
 
     let repo_path = &cli.path;
     if !repo_path.exists() || !repo_path.is_dir() {
@@ -1257,23 +1257,42 @@ fn dump_manifest(cli: &Cli) -> ExitCode {
         return ExitCode::from(1);
     }
 
-    for path in &rpm_files {
-        let mut reader = match RpmReader::open(path) {
-            Ok(r) => r,
-            Err(_) => continue,
-        };
+    let num_workers = cli.workers();
+    let (work_tx, work_rx) = bounded::<PathBuf>(num_workers * 4);
+    let (result_tx, result_rx) = bounded::<String>(num_workers * 4);
 
-        let pkg = match reader.read_package() {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
+    std::thread::scope(|s| {
+        for _ in 0..num_workers {
+            let rx = work_rx.clone();
+            let tx = result_tx.clone();
+            s.spawn(move || {
+                while let Ok(path) = rx.recv() {
+                    let mut reader = match RpmReader::open(&path) {
+                        Ok(r) => r,
+                        Err(_) => continue,
+                    };
+                    let entry = match reader.read_manifest_entry() {
+                        Ok(e) => e,
+                        Err(_) => continue,
+                    };
+                    let line = format!(
+                        "{{\"name\":\"{}\",\"version\":\"{}\",\"arch\":\"{}\",\"signed\":{}}}",
+                        entry.name, entry.version, entry.arch, entry.signed
+                    );
+                    let _ = tx.send(line);
+                }
+            });
+        }
 
-        let signed = reader.is_signed();
+        for path in &rpm_files {
+            let _ = work_tx.send(path.clone());
+        }
+        drop(work_tx);
+    });
 
-        println!(
-            "{{\"name\":\"{}\",\"version\":\"{}\",\"arch\":\"{}\",\"signed\":{}}}",
-            pkg.name, pkg.version, pkg.arch, signed
-        );
+    drop(result_tx);
+    for line in result_rx {
+        println!("{line}");
     }
 
     ExitCode::from(0)

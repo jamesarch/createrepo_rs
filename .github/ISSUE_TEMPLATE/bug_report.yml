@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible problem in createrepo_rs
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include the command line and the smallest RPM set or fixture that reproduces the issue.
+      placeholder: |
+        1. Run `createrepo_rs ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: createrepo_rs version
+      placeholder: "0.1.9"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS / distribution
+      placeholder: "Debian 13, Fedora 41, RHEL 9, ..."
+    validations:
+      required: true

@@ -57,7 +57,7 @@ pub struct ChangelogEntry {
 
 impl From<crate::rpm::DependencyInfo> for Dependency {
     fn from(d: crate::rpm::DependencyInfo) -> Self {
-        Dependency {
+        Self {
             name: d.name,
             epoch: d.epoch,
             version: d.version,
@@ -70,7 +70,7 @@ impl From<crate::rpm::DependencyInfo> for Dependency {
 
 impl From<crate::rpm::ChangelogInfo> for ChangelogEntry {
     fn from(c: crate::rpm::ChangelogInfo) -> Self {
-        ChangelogEntry {
+        Self {
             author: c.author,
             date: c.date,
             content: c.content,

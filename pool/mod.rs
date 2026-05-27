@@ -106,11 +106,13 @@ impl WorkerPool {
     /// Submits a job to the pool for processing.
     ///
     /// Returns true if the job was submitted successfully, false if the pool
-    /// has been shut down.
+    /// has been shut down or the submit timed out (workers likely stuck).
     #[must_use]
     pub fn submit(&self, job: Job) -> bool {
         if let Some(ref sender) = self.job_sender {
-            sender.send(WorkerMessage::Job(job)).map(|()| true).is_ok()
+            sender
+                .send_timeout(WorkerMessage::Job(job), Duration::from_secs(30))
+                .is_ok()
         } else {
             false
         }
@@ -150,18 +152,29 @@ impl WorkerPool {
         while !shutdown_flag.load(std::sync::atomic::Ordering::SeqCst) {
             match receiver.recv_timeout(Duration::from_millis(100)) {
                 Ok(WorkerMessage::Job(job)) => {
-                    let result = Self::process_job(job);
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        Self::process_job(job)
+                    }));
+                    let result = match result {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let msg = if let Some(s) = e.downcast_ref::<String>() {
+                                s.clone()
+                            } else if let Some(s) = e.downcast_ref::<&str>() {
+                                (*s).to_string()
+                            } else {
+                                "worker panicked".to_string()
+                            };
+                            ProcessingResult::Error(PathBuf::from("panic"), msg)
+                        }
+                    };
                     let _ = result_sender.send(result);
                 }
-                Ok(WorkerMessage::Stop) => {
+                Ok(WorkerMessage::Stop)
+                | Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
                     break;
                 }
-                Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
-                    continue;
-                }
-                Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
-                    break;
-                }
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => {}
             }
         }
     }
@@ -197,7 +210,7 @@ impl WorkerPool {
 
 /// Converts an `rpm::Package` to a `types::Package`.
 fn convert_package(rpm_pkg: crate::rpm::Package) -> TypesPackage {
-    let location = rpm_pkg.location.clone();
+    let location = rpm_pkg.location;
     TypesPackage {
         pkgid: rpm_pkg.sha256.clone(),
         name: rpm_pkg.name,

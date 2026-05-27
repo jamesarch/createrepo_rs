@@ -93,6 +93,7 @@ pub struct RpmReader {
 /// - `"1.2.3-4"` → `(None, "1.2.3", "4")`
 /// - `"0:1.2.3-4"` → `(Some(0), "1.2.3", "4")`
 /// - `"5:3.14"` → `(Some(5), "3.14", None)`
+#[must_use]
 pub fn parse_dep_version(raw: &str) -> (Option<i32>, Option<String>, Option<String>) {
     if raw.is_empty() {
         return (None, None, None);
@@ -144,9 +145,25 @@ fn convert_file_mode(mode: rpm_crate::FileMode) -> String {
         rpm_crate::FileMode::Dir { .. } => "dir".to_string(),
         rpm_crate::FileMode::Regular { .. } => "file".to_string(),
         rpm_crate::FileMode::SymbolicLink { .. } => "symlink".to_string(),
-        rpm_crate::FileMode::Invalid { .. } => "unknown".to_string(),
         _ => "unknown".to_string(),
     }
+}
+
+fn process_deps(deps: Vec<rpm_crate::Dependency>) -> Vec<DependencyInfo> {
+    deps.into_iter()
+        .map(|dep| {
+            let flags_str = convert_dependency_flags(dep.flags);
+            let (epoch, version, release) = parse_dep_version(&dep.version);
+            DependencyInfo {
+                name: dep.name,
+                flags: flags_str,
+                epoch,
+                version,
+                release,
+                pre: false,
+            }
+        })
+        .collect()
 }
 
 impl RpmReader {
@@ -248,160 +265,14 @@ impl RpmReader {
             .map(std::string::ToString::to_string)
             .ok();
 
-        let provides = metadata
-            .get_provides()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (version, release) = if dep.version.is_empty() {
-                    (None, None)
-                } else {
-                    // C format: ver="3.4.5" rel="6" - split by last '-'
-                    match dep.version.rfind('-') {
-                        Some(pos) => (
-                            Some(dep.version[..pos].to_string()),
-                            Some(dep.version[pos + 1..].to_string()),
-                        ),
-                        None => (Some(dep.version.clone()), None),
-                    }
-                };
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch: None,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let requires = metadata
-            .get_requires()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let conflicts = metadata
-            .get_conflicts()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let obsoletes = metadata
-            .get_obsoletes()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let suggests = metadata
-            .get_suggests()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let enhances = metadata
-            .get_enhances()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let recommends = metadata
-            .get_recommends()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
-
-        let supplements = metadata
-            .get_supplements()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|dep| {
-                let flags_str = convert_dependency_flags(dep.flags);
-                let (epoch, version, release) = parse_dep_version(&dep.version);
-                DependencyInfo {
-                    name: dep.name,
-                    flags: flags_str,
-                    epoch,
-                    version,
-                    release,
-                    pre: false,
-                }
-            })
-            .collect();
+        let provides = process_deps(metadata.get_provides().unwrap_or_default());
+        let requires = process_deps(metadata.get_requires().unwrap_or_default());
+        let conflicts = process_deps(metadata.get_conflicts().unwrap_or_default());
+        let obsoletes = process_deps(metadata.get_obsoletes().unwrap_or_default());
+        let suggests = process_deps(metadata.get_suggests().unwrap_or_default());
+        let enhances = process_deps(metadata.get_enhances().unwrap_or_default());
+        let recommends = process_deps(metadata.get_recommends().unwrap_or_default());
+        let supplements = process_deps(metadata.get_supplements().unwrap_or_default());
 
         let changelogs = metadata
             .get_changelog_entries()
@@ -461,7 +332,7 @@ impl RpmReader {
 fn compute_sha256(path: &Path) -> Result<String, RpmError> {
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 65536];
+    let mut buffer = vec![0u8; 65536];
     loop {
         let bytes_read = std::io::Read::read(&mut file, &mut buffer)?;
         if bytes_read == 0 {

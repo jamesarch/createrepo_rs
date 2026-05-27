@@ -45,7 +45,18 @@ impl std::str::FromStr for CompressionType {
 
 /// CLI arguments for `createrepo_c`.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    about,
+    long_about = None,
+    version = concat!(
+        env!("CARGO_PKG_VERSION"),
+        "\nrevision  ",
+        env!("GIT_HASH"),
+        "\nbuilt     ",
+        env!("BUILD_TIME"),
+    )
+)]
 pub struct Cli {
     /// Path to the repository directory.
     #[arg(value_hint = ValueHint::DirPath)]
@@ -250,6 +261,11 @@ pub struct Cli {
     /// What to do about duplicates.
     #[arg(long)]
     pub duplicated_nevra: Option<String>,
+
+    /// Global timeout in seconds. If the process runs longer than this,
+    /// it will be forcefully terminated (0 = no timeout).
+    #[arg(long)]
+    pub timeout: Option<u64>,
 }
 
 impl Cli {

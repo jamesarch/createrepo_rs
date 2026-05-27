@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use createrepo_rs::cli::Cli;
 use createrepo_rs::db::{self, RepomdDb};
@@ -116,6 +116,20 @@ fn main() -> ExitCode {
             LogLevel::Normal,
             "Note: Using simple-md-filenames (no checksums in metadata filenames)"
         );
+    }
+
+    if let Some(timeout_secs) = cli.timeout {
+        if timeout_secs > 0 {
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_secs(timeout_secs));
+                if !INTERRUPTED.load(Ordering::SeqCst) {
+                    eprintln!("Global timeout ({timeout_secs}s) reached, shutting down...");
+                    INTERRUPTED.store(true, Ordering::SeqCst);
+                    std::thread::sleep(Duration::from_secs(5));
+                    std::process::exit(1);
+                }
+            });
+        }
     }
 
     if !repo_path.exists() || !repo_path.is_dir() {
@@ -432,53 +446,87 @@ fn main() -> ExitCode {
     } else {
         let (mut pool, receiver) = createrepo_rs::pool::WorkerPool::new(num_workers);
 
+        let mut submitted_jobs = 0usize;
         for rpm_path in &rpm_files {
-            let _submit_ok =
-                pool.submit(createrepo_rs::pool::Job::ProcessPackage(rpm_path.clone()));
+            if pool.submit(createrepo_rs::pool::Job::ProcessPackage(rpm_path.clone())) {
+                submitted_jobs += 1;
+            } else {
+                log!(
+                    &cli,
+                    LogLevel::Warning,
+                    "Warning: Failed to submit job for {} (workers may be stuck, skipping)",
+                    rpm_path.display()
+                );
+                errors += 1;
+            }
         }
 
-        let total_jobs = rpm_files.len();
+        let total_jobs = submitted_jobs;
         let mut collected = 0;
 
-        while let Ok(result) = receiver.recv() {
-            if INTERRUPTED.load(Ordering::SeqCst) {
-                log!(&cli, LogLevel::Normal, "\nInterrupted! Cleaning up...");
-                let _ = std::fs::remove_dir_all(&repodata_tmp);
-                return ExitCode::from(130);
-            }
-            collected += 1;
-            match result {
-                createrepo_rs::pool::ProcessingResult::Success(_path, mut pkg) => {
-                    // Apply changelog limit
-                    if let Some(limit) = changelog_limit {
-                        pkg.changelogs.truncate(limit);
+        while collected < total_jobs {
+            match receiver.recv_timeout(Duration::from_secs(300)) {
+                Ok(result) => {
+                    if INTERRUPTED.load(Ordering::SeqCst) {
+                        log!(&cli, LogLevel::Normal, "\nInterrupted! Cleaning up...");
+                        let _ = std::fs::remove_dir_all(&repodata_tmp);
+                        return ExitCode::from(130);
                     }
-                    if let Some(ref db) = db {
-                        if let Err(e) = db.insert_package(&pkg) {
+                    collected += 1;
+                    match result {
+                        createrepo_rs::pool::ProcessingResult::Success(_path, mut pkg) => {
+                            // Apply changelog limit
+                            if let Some(limit) = changelog_limit {
+                                pkg.changelogs.truncate(limit);
+                            }
+                            if let Some(ref db) = db {
+                                if let Err(e) = db.insert_package(&pkg) {
+                                    log!(
+                                        &cli,
+                                        LogLevel::Warning,
+                                        "Warning: Failed to insert package {}: {}",
+                                        pkg.name,
+                                        e
+                                    );
+                                }
+                            }
+                            packages.push(pkg);
+                        }
+                        createrepo_rs::pool::ProcessingResult::Error(path, err) => {
                             log!(
                                 &cli,
                                 LogLevel::Warning,
-                                "Warning: Failed to insert package {}: {}",
-                                pkg.name,
-                                e
+                                "Warning: Failed to process {}: {}",
+                                path.display(),
+                                err
                             );
+                            errors += 1;
                         }
                     }
-                    packages.push(pkg);
                 }
-                createrepo_rs::pool::ProcessingResult::Error(path, err) => {
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
                     log!(
                         &cli,
                         LogLevel::Warning,
-                        "Warning: Failed to process {}: {}",
-                        path.display(),
-                        err
+                        "Warning: Timed out waiting for package results \
+                         ({} of {} processed, {} workers may be stuck on I/O)",
+                        collected,
+                        total_jobs,
+                        total_jobs - collected
                     );
-                    errors += 1;
+                    INTERRUPTED.store(true, Ordering::SeqCst);
+                    break;
                 }
-            }
-            if collected == total_jobs {
-                break;
+                Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
+                    log!(
+                        &cli,
+                        LogLevel::Warning,
+                        "Warning: Worker channel disconnected ({} of {} processed)",
+                        collected,
+                        total_jobs
+                    );
+                    break;
+                }
             }
         }
 
@@ -995,7 +1043,7 @@ const fn convert_compression(cli_comp: createrepo_rs::cli::CompressionType) -> T
 }
 
 fn convert_package(rpm_pkg: createrepo_rs::rpm::Package, basedir: &Option<PathBuf>) -> Package {
-    let location = rpm_pkg.location.clone();
+    let location = rpm_pkg.location;
 
     // Calculate location_href based on basedir (clone once for this computation)
     let location_href = if let Some(ref bd) = basedir {

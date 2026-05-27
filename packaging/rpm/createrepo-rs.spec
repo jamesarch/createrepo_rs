@@ -13,6 +13,11 @@ BuildRequires:  make
 
 # Rust deps are vendored — no network access needed during build
 
+# Disable debugsource on RHEL/EPEL (not supported with vendored Rust deps)
+%if 0%{?rhel}
+%global debug_package %{nil}
+%endif
+
 %description
 createrepo-rs is a pure Rust implementation of createrepo_c that generates
 RPM repository metadata (repodata). It produces dnf/yum-compatible output

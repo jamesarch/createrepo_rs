@@ -124,7 +124,7 @@ jobs:
           # Build the unsigned source upload set first. A later optional debsign step
           # signs both .dsc and .changes for mentors.debian.net.
           cd "${SRC_DIR}"
-          dpkg-buildpackage -S -sa -us -uc
+          dpkg-buildpackage -S -sa -us -uc -d
 
           cd /tmp
           DEB_VERSION="$(dpkg-parsechangelog --file "${SRC_DIR}/debian/changelog" -S Version)"

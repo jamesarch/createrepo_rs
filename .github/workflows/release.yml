@@ -30,7 +30,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          # Manual dispatches use the selected branch contents and publish to
+          # inputs.tag. This lets Debian-only packaging revisions (for example
+          # 0.1.9-2) be rebuilt without moving the upstream v0.1.9 tag.
+          ref: ${{ github.ref }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

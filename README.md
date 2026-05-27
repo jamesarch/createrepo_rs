@@ -37,6 +37,20 @@ cargo install createrepo_rs
 # Or from git
 cargo install --git https://github.com/jamesarch/createrepo_rs createrepo_rs
 
+# --- Distro packages ---
+
+# Fedora / RHEL / CentOS (COPR)
+dnf copr enable jamesarch/createrepo-rs
+dnf install createrepo-rs
+
+# Arch Linux (AUR)
+yay -S createrepo-rs
+# or: paru -S createrepo-rs
+
+# Debian / Ubuntu (.deb)
+curl -LO https://github.com/jamesarch/createrepo_rs/releases/download/v0.1.8/createrepo-rs_0.1.8_amd64.deb
+dpkg -i createrepo-rs_0.1.8_amd64.deb
+
 # Generate metadata for a directory of RPMs
 createrepo_rs /path/to/rpms/
 

@@ -23,6 +23,9 @@
 # Cargo vendor
 /vendor/
 
+# Cargo local config (only used in vendored tarball for COPR)
+.cargo/
+
 # GPG keys
 *.asc
 

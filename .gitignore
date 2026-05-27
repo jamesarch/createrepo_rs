@@ -30,4 +30,8 @@
 *.asc
 
 # Build results
+/result
 /result/
+
+# Docker build artifact
+/createrepo_rs

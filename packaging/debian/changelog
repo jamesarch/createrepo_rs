@@ -1,3 +1,9 @@
+createrepo-rs (0.1.9-2) unstable; urgency=medium
+
+  * Re-upload with GPG signature.
+
+ -- jamesarch <han.shan@live.cn>  Tue, 27 May 2026 00:00:00 +0000
+
 createrepo-rs (0.1.9-1) unstable; urgency=medium
 
   * New upstream release.

@@ -90,16 +90,19 @@ jobs:
 
           # Create source directory with Debian-compatible naming (hyphens)
           mkdir -p "${SRC_DIR}"
-          # Copy all tracked files into the Debian-named source dir
-          git ls-files -z | xargs -0 -I{} cp --parents "{}" "${SRC_DIR}/"
+          # Copy all tracked files EXCEPT packaging/ into the Debian-named source dir
+          git ls-files -z | grep -zv '^packaging/' | xargs -0 -I{} cp --parents "{}" "${SRC_DIR}/"
 
           # Copy debian packaging files into the source
           cp -r packaging/debian "${SRC_DIR}/debian"
 
-          cd "${SRC_DIR}"
+          # Create .orig.tar.gz (source without debian/)
+          cd /tmp
+          tar czf "${PKG}_${VERSION}.orig.tar.gz" --exclude=debian "${PKG}-${VERSION}/"
 
+          cd "${SRC_DIR}"
           # Build source package (unsigned — user signs and uploads to mentors)
-          dpkg-source --build . 2>&1 || true
+          dpkg-source --build . 2>&1
 
           # dpkg-source with format 3.0 (quilt) creates files in parent dir
           cd /tmp
@@ -108,7 +111,7 @@ jobs:
           ls -la *.dsc *.orig.tar.* *.debian.tar.* 2>/dev/null || true
 
           # Copy artifacts to workspace
-          cp *.dsc *.orig.tar.* *.debian.tar.* *.buildinfo *.changes "${GITHUB_WORKSPACE}/" 2>/dev/null || true
+          cp *.dsc *.orig.tar.* *.debian.tar.* "${GITHUB_WORKSPACE}/" 2>/dev/null || true
 
           cd "${GITHUB_WORKSPACE}"
           ls -la *.dsc *.orig.tar.* *.debian.tar.* 2>/dev/null || true
@@ -244,6 +247,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
 
+      - name: Prepare Dockerfile
+        run: |
+          cat > Dockerfile.build << 'DOCKEREOF'
+          FROM scratch
+          COPY createrepo_rs /usr/local/bin/createrepo_rs
+          ENTRYPOINT ["createrepo_rs"]
+          DOCKEREOF
+
       - name: Build and push Docker images
         uses: docker/build-push-action@v6
         with:
@@ -252,7 +263,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
-          file: Dockerfile
+          file: Dockerfile.build
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

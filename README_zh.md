@@ -7,7 +7,7 @@
 
 **100% 纯 Rust 实现的 `createrepo_c`** — 生成 RPM 仓库元数据（repodata）。
 
-C 版本的直接替代品，**输出完全一致、零 FFI、3.5MB 静态二进制。**
+C 版本的直接替代品，**dnf 兼容输出、零 FFI、3.5MB 静态二进制。**
 
 [English](README.md)
 
@@ -17,7 +17,7 @@ C 版本的直接替代品，**输出完全一致、零 FFI、3.5MB 静态二进
 
 | | createrepo_c (C) | createrepo_rs (Rust) |
 |---|---|---|
-| 输出兼容性 | ✅ | ✅ 100% 字节一致 |
+| 输出兼容性 | ✅ | ✅ dnf 兼容 |
 | CLI 参数 | 55 | 53 |
 | 依赖 | librpm, libxml2, glib2, zchunk... | **零** FFI — 纯 Rust 生态 |
 | 二进制大小 | ~200KB + 动态库 | **3.5MB 静态链接** (musl) |
@@ -91,7 +91,7 @@ createrepo_rs /srv/repo/ \
 ## 📦 功能特性
 
 ### 核心功能
-- ✅ primary.xml、filelists.xml、other.xml 生成 — **与 createrepo_c 字节一致**
+- ✅ primary.xml、filelists.xml、other.xml 生成 — dnf 兼容
 - ✅ repomd.xml 支持多哈希校验（sha256/sha512）
 - ✅ 内存级 SQLite — 内存速度写入，完成时一次性落盘
 - ✅ `--no-database` 完全跳过 SQLite 生成
@@ -336,7 +336,7 @@ pool.submit(Job::ProcessPackage(PathBuf::from("pkg.rpm")));
 ### v0.1.4 — 首次公开发布
 - 52/55 CLI 参数
 - `dnf` 兼容（Docker 集成测试验证）
-- XML 输出与 createrepo_c 字节一致
+- dnf 兼容的 XML 输出
 
 ## 📝 许可证
 

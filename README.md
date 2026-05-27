@@ -7,7 +7,7 @@
 
 **100% pure Rust implementation of `createrepo_c`** — generates RPM repository metadata (repodata).
 
-Drop-in replacement for the C version with **identical output, zero FFI, 3.5MB static binary.**
+Drop-in replacement for the C version with **dnf-compatible output, zero FFI, 3.5MB static binary.**
 
 [中文文档](README_zh.md)
 
@@ -17,7 +17,7 @@ Drop-in replacement for the C version with **identical output, zero FFI, 3.5MB s
 
 | | createrepo_c (C) | createrepo_rs (Rust) |
 |---|---|---|
-| Output compatibility | ✅ | ✅ 100% byte-compatible |
+| Output compatibility | ✅ | ✅ dnf-compatible |
 | CLI arguments | 55 | 53 |
 | Dependencies | librpm, libxml2, glib2, zchunk... | **zero** FFI — pure Rust crates |
 | Binary size | ~200KB + shared libs | **3.5MB static** (musl) |
@@ -91,7 +91,7 @@ Benchmarks on Zabbix production server (Debian 13, 80-core, 254 RPMs):
 ## 📦 Features
 
 ### Core
-- ✅ primary.xml, filelists.xml, other.xml generation — **byte-identical to createrepo_c**
+- ✅ primary.xml, filelists.xml, other.xml generation — dnf-compatible
 - ✅ repomd.xml with correct multi-hash checksums (sha256/sha512)
 - ✅ In-memory SQLite — writes at RAM speed, flushes at finish via `VACUUM INTO`
 - ✅ `--no-database` to skip SQLite entirely
@@ -336,7 +336,7 @@ The [`prelude`] module re-exports all commonly used types:
 ### v0.1.4 — Initial public release
 - 52/55 CLI parameters
 - `dnf` compatible (verified with Docker integration test)
-- Byte-identical XML output to createrepo_c
+- dnf-compatible XML output
 
 ## 📝 License
 

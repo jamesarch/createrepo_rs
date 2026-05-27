@@ -23,6 +23,10 @@ jobs:
   release:
     name: Build and publish ${{ inputs.tag || github.ref_name }}
     runs-on: ubuntu-latest
+    env:
+      DEBIAN_GPG_PRIVATE_KEY: ${{ secrets.DEBIAN_GPG_PRIVATE_KEY }}
+      DEBIAN_GPG_PASSPHRASE: ${{ secrets.DEBIAN_GPG_PASSPHRASE }}
+      DEBIAN_GPG_KEY_ID: ${{ secrets.DEBIAN_GPG_KEY_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +58,17 @@ jobs:
           cp target/x86_64-unknown-linux-musl/release/createrepo_rs createrepo_rs-x86_64-unknown-linux-musl
           cp target/x86_64-unknown-linux-musl/release/createrepo_rs createrepo_rs
 
+      - name: Determine release version
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          MAJOR_MINOR="$(printf '%s' "${VERSION}" | awk -F. '{print $1"."$2}')"
+          {
+            echo "release_tag=${TAG}"
+            echo "release_version=${VERSION}"
+            echo "major_minor=${MAJOR_MINOR}"
+          } >> "$GITHUB_ENV"
+
       - name: Build vendored tarball (for COPR)
         run: |
           VERSION="${{ inputs.tag || github.ref_name }}"
@@ -75,54 +90,86 @@ jobs:
 
           # Create vendored tarball (must extract to createrepo_rs-{VERSION}/ for COPR spec)
           # git ls-files includes all tracked files; add vendor/ and .cargo/ explicitly
-          tar czf "${TARBALL}" \
-            --transform "s,^,createrepo_rs-${VERSION}/," \
-            $(git ls-files) vendor/ .cargo/
+          { git ls-files -z; printf '%s\0' vendor .cargo; } | \
+            tar --null -T - -czf "${TARBALL}" \
+              --transform "s,^,createrepo_rs-${VERSION}/,"
 
-          echo "vendored_tarball=${TARBALL}" >> $GITHUB_ENV
+          echo "vendored_tarball=${TARBALL}" >> "$GITHUB_ENV"
 
       - name: Build Debian source package
         run: |
-          VERSION="${{ inputs.tag || github.ref_name }}"
-          VERSION="${VERSION#v}"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq debhelper devscripts
+
+          VERSION="${release_version}"
           PKG="createrepo-rs"
           SRC_DIR="/tmp/${PKG}-${VERSION}"
 
-          # Create source directory with Debian-compatible naming (hyphens)
+          rm -rf "${SRC_DIR}"
           mkdir -p "${SRC_DIR}"
-          # Copy all tracked files EXCEPT packaging/ into the Debian-named source dir
-          git ls-files -z | grep -zv '^packaging/' | xargs -0 -I{} cp --parents "{}" "${SRC_DIR}/"
+          # Copy all tracked files EXCEPT packaging/ into the Debian-named source dir.
+          # Use tar rather than cp --parents so the command is easy to validate outside GNU cp.
+          git ls-files -z | grep -zv '^packaging/' | tar --null -T - -cf - | tar -C "${SRC_DIR}" -xf -
 
-          # Copy debian packaging files into the source
+          # Copy debian packaging files into the source.
           cp -r packaging/debian "${SRC_DIR}/debian"
 
-          # Create .orig.tar.gz (source without debian/)
+          # Create .orig.tar.gz (source without debian/).
           cd /tmp
           tar czf "${PKG}_${VERSION}.orig.tar.gz" --exclude=debian "${PKG}-${VERSION}/"
 
+          # Build the unsigned source upload set first. A later optional debsign step
+          # signs both .dsc and .changes for mentors.debian.net.
           cd "${SRC_DIR}"
-          # Build source package (unsigned — user signs and uploads to mentors)
-          dpkg-source --build . 2>&1
+          dpkg-buildpackage -S -sa -us -uc
 
-          # dpkg-source with format 3.0 (quilt) creates files in parent dir
           cd /tmp
+          DEB_VERSION="$(dpkg-parsechangelog --file "${SRC_DIR}/debian/changelog" -S Version)"
+          DSC_FILE="${PKG}_${DEB_VERSION}.dsc"
+          ORIG_FILE="${PKG}_${VERSION}.orig.tar.gz"
+          DEBIAN_FILE="${PKG}_${DEB_VERSION}.debian.tar.xz"
+          CHANGES_FILE="${PKG}_${DEB_VERSION}_source.changes"
+          BUILDINFO_FILE="${PKG}_${DEB_VERSION}_source.buildinfo"
 
-          # List what we got
-          ls -la *.dsc *.orig.tar.* *.debian.tar.* 2>/dev/null || true
+          ls -la "${DSC_FILE}" "${ORIG_FILE}" "${DEBIAN_FILE}" "${CHANGES_FILE}" "${BUILDINFO_FILE}"
+          cp "${DSC_FILE}" "${ORIG_FILE}" "${DEBIAN_FILE}" "${CHANGES_FILE}" "${BUILDINFO_FILE}" "${GITHUB_WORKSPACE}/"
 
-          # Copy artifacts to workspace
-          cp *.dsc *.orig.tar.* *.debian.tar.* "${GITHUB_WORKSPACE}/" 2>/dev/null || true
+          {
+            echo "dsc_file=${DSC_FILE}"
+            echo "orig_file=${ORIG_FILE}"
+            echo "debian_tar_file=${DEBIAN_FILE}"
+            echo "changes_file=${CHANGES_FILE}"
+            echo "buildinfo_file=${BUILDINFO_FILE}"
+          } >> "$GITHUB_ENV"
 
-          cd "${GITHUB_WORKSPACE}"
-          ls -la *.dsc *.orig.tar.* *.debian.tar.* 2>/dev/null || true
+      - name: Sign Debian source package
+        if: ${{ env.DEBIAN_GPG_PRIVATE_KEY != '' }}
+        run: |
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          chmod 700 "$GNUPGHOME"
+          printf '%s' "$DEBIAN_GPG_PRIVATE_KEY" | gpg --batch --import
 
-          # Set env vars for publish step
-          DSC_FILE=$(ls *.dsc 2>/dev/null | head -1)
-          ORIG_FILE=$(ls *.orig.tar.* 2>/dev/null | head -1)
-          DEBIAN_FILE=$(ls *.debian.tar.* 2>/dev/null | head -1)
-          echo "dsc_file=${DSC_FILE}" >> $GITHUB_ENV
-          echo "orig_file=${ORIG_FILE}" >> $GITHUB_ENV
-          echo "debian_tar_file=${DEBIAN_FILE}" >> $GITHUB_ENV
+          KEY_ARG="${DEBIAN_GPG_KEY_ID}"
+          if [ -z "${KEY_ARG}" ]; then
+            KEY_ARG="$(gpg --batch --with-colons --list-secret-keys | awk -F: '/^sec:/ { print $5; exit }')"
+          fi
+
+          if [ -n "${DEBIAN_GPG_PASSPHRASE}" ]; then
+            cat > gpg-loopback <<'EOFGPG'
+          #!/bin/sh
+          exec gpg --batch --yes --pinentry-mode loopback --passphrase "$DEBIAN_GPG_PASSPHRASE" "$@"
+          EOFGPG
+            chmod 700 gpg-loopback
+            export DEBSIGN_PROGRAM="$PWD/gpg-loopback"
+          fi
+
+          debsign -k"${KEY_ARG}" "${changes_file}"
+
+          # Prove both files are signed; mentors rejects unsigned .dsc files even
+          # when .changes is signed.
+          grep -q '^-----BEGIN PGP SIGNED MESSAGE-----' "${dsc_file}"
+          grep -q '^-----BEGIN PGP SIGNED MESSAGE-----' "${changes_file}"
 
       - name: Build .deb package
         run: |
@@ -165,7 +212,7 @@ jobs:
           EOFCTRL
 
           dpkg-deb --root-owner-group --build "${DEB_ROOT}" "${DEB_NAME}.deb"
-          echo "deb_file=${DEB_NAME}.deb" >> $GITHUB_ENV
+          echo "deb_file=${DEB_NAME}.deb" >> "$GITHUB_ENV"
 
       - name: Build .rpm package
         run: |
@@ -217,12 +264,13 @@ jobs:
 
           RPM_FILE="${RPM_ROOT}/RPMS/x86_64/${RPM_NAME}.x86_64.rpm"
           cp "${RPM_FILE}" .
-          echo "rpm_file=$(basename "${RPM_FILE}")" >> $GITHUB_ENV
+          echo "rpm_file=$(basename "${RPM_FILE}")" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        continue-on-error: true
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -235,16 +283,24 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker metadata
-        id: meta
+      - name: Docker metadata (GHCR)
+        id: meta-ghcr
         uses: docker/metadata-action@v5
         with:
-          images: |
-            jamesarch/createrepo-rs
-            ghcr.io/${{ github.repository_owner }}/createrepo-rs
+          images: ghcr.io/${{ github.repository_owner }}/createrepo-rs
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ env.release_version }}
+            type=raw,value=${{ env.major_minor }}
+            type=sha
+
+      - name: Docker metadata (Docker Hub)
+        id: meta-dockerhub
+        uses: docker/metadata-action@v5
+        with:
+          images: jamesarch/createrepo-rs
+          tags: |
+            type=raw,value=${{ env.release_version }}
+            type=raw,value=${{ env.major_minor }}
             type=sha
 
       - name: Prepare Dockerfile
@@ -252,16 +308,27 @@ jobs:
           cat > Dockerfile.build << 'DOCKEREOF'
           FROM scratch
           COPY createrepo_rs /usr/local/bin/createrepo_rs
-          ENTRYPOINT ["createrepo_rs"]
+          ENTRYPOINT ["/usr/local/bin/createrepo_rs"]
           DOCKEREOF
 
-      - name: Build and push Docker images
+      - name: Build and push GHCR image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-ghcr.outputs.tags }}
+          labels: ${{ steps.meta-ghcr.outputs.labels }}
+          platforms: linux/amd64
+          file: Dockerfile.build
+
+      - name: Build and push Docker Hub image
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-dockerhub.outputs.tags }}
+          labels: ${{ steps.meta-dockerhub.outputs.labels }}
           platforms: linux/amd64
           file: Dockerfile.build
 
@@ -284,3 +351,5 @@ jobs:
             ${{ env.dsc_file }}
             ${{ env.orig_file }}
             ${{ env.debian_tar_file }}
+            ${{ env.changes_file }}
+            ${{ env.buildinfo_file }}

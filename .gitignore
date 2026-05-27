@@ -35,3 +35,4 @@
 
 # Docker build artifact
 /createrepo_rs
+.omx/

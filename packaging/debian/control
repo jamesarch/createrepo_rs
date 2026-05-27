@@ -1,7 +1,7 @@
 Source: createrepo-rs
 Section: admin
 Priority: optional
-Maintainer: jamesarch <https://github.com/jamesarch>
+Maintainer: jamesarch <han.shan@live.cn>
 Build-Depends:
  debhelper-compat (= 13),
  cargo,

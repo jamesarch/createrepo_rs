@@ -19,3 +19,12 @@
 
 # oh-my-claudecode workspace
 .omc/
+
+# Cargo vendor
+/vendor/
+
+# GPG keys
+*.asc
+
+# Build results
+/result/

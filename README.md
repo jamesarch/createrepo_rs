@@ -5,9 +5,7 @@
 [![CI](https://github.com/jamesarch/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jamesarch/createrepo_rs/actions)
 [![crates.io](https://img.shields.io/crates/v/createrepo_rs.svg)](https://crates.io/crates/createrepo_rs)
 
-**100% pure Rust implementation of `createrepo_c`** — generates RPM repository metadata (repodata).
-
-Drop-in replacement for the C version with **dnf-compatible output, zero FFI, 3.5MB static binary.**
+**Pure Rust RPM repository metadata generator** — creates repodata (primary.xml, filelists.xml, other.xml, repomd.xml) compatible with dnf and yum. Single static binary, zero FFI, drop-in replacement for `createrepo_c`.
 
 [中文文档](README_zh.md)
 

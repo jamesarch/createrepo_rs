@@ -3,13 +3,13 @@ name = "createrepo_rs"
 version = "0.1.8"
 edition = "2021"
 authors = ["jamesarch"]
-description = "🦀 Pure Rust implementation of createrepo_c — generates RPM repository metadata (repodata). Drop-in replacement, dnf-compatible, zero FFI."
+description = "🦀 Pure Rust RPM repository metadata generator — creates repodata for dnf/yum repos. Zero FFI, single static binary. Drop-in replacement for createrepo_c and createrepo."
 license = "GPL-2.0-or-later"
 repository = "https://github.com/jamesarch/createrepo_rs"
 homepage = "https://github.com/jamesarch/createrepo_rs"
 documentation = "https://docs.rs/createrepo_rs"
 readme = "README.md"
-keywords = ["rpm", "createrepo", "repodata", "yum", "dnf"]
+keywords = ["rpm", "createrepo", "repodata", "yum", "dnf", "repository", "metadata", "linux", "packaging", "rpm-package"]
 categories = ["command-line-utilities", "development-tools::build-utils"]
 rust-version = "1.76"
 

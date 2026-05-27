@@ -5,7 +5,7 @@ Summary:        Pure Rust RPM repository metadata generator
 
 License:        GPL-2.0-or-later
 URL:            https://github.com/jamesarch/createrepo_rs
-Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/v%{version}/createrepo_rs-%{version}.tar.gz
 
 BuildRequires:  cargo
 BuildRequires:  rust >= 1.76

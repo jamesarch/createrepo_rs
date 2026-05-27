@@ -1,29 +1,31 @@
-{ lib, rustPlatform, fetchFromGitHub }:
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+}:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "createrepo-rs";
   version = "0.1.8";
 
   src = fetchFromGitHub {
     owner = "jamesarch";
     repo = "createrepo_rs";
-    rev = "v${version}";
-    sha256 = "9f93784bf1d9504827c17009288f1f122e81a5975e651102405e0985be401f14";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-b247804b26b401118ceaf70ee4e56f283db44866120b0b354529db9c90d821d2=";
   };
 
-  cargoHash = ""; # nix-build -A createrepo-rs 2>&1 | grep cargoHash
+  cargoHash = "sha256-70KuriwRVWSRKpGMYF5kY0e1PA4lL7YSU5j8p7ojdgA=";
 
-  nativeBuildInputs = [ ];
+  __structuredAttrs = true;
 
-  buildFeatures = [ ];
-
-  meta = with lib; {
+  meta = {
     description = "Pure Rust RPM repository metadata generator — dnf/yum-compatible, zero FFI";
     homepage = "https://github.com/jamesarch/createrepo_rs";
-    changelog = "https://github.com/jamesarch/createrepo_rs/releases/tag/v${version}";
-    license = licenses.gpl2Plus;
+    changelog = "https://github.com/jamesarch/createrepo_rs/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.gpl2Plus;
     mainProgram = "createrepo_rs";
-    maintainers = with maintainers; [ ];
-    platforms = platforms.linux ++ platforms.darwin;
+    maintainers = [ ];
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
   };
-}
+})

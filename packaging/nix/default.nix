@@ -8,7 +8,7 @@ rustPlatform.buildRustPackage rec {
     owner = "jamesarch";
     repo = "createrepo_rs";
     rev = "v${version}";
-    sha256 = ""; # nix-prefetch-url --unpack https://github.com/jamesarch/createrepo_rs/archive/v${version}.tar.gz
+    sha256 = "9f93784bf1d9504827c17009288f1f122e81a5975e651102405e0985be401f14";
   };
 
   cargoHash = ""; # nix-build -A createrepo-rs 2>&1 | grep cargoHash

@@ -174,9 +174,9 @@ A lightweight, parallel package inventory scanner built into the binary:
 
 254 packages in **0.078 seconds** on 80 cores. Replaces `rpm -K` + `rpm -qp` loops in CI/CD pipelines.
 
-### NFS Resilience (v0.1.5)
+### I/O Resilience (v0.1.5)
 
-Production Zabbix deployments run on NFS mounts where I/O can stall indefinitely. Mitigations:
+Repository directories on network mounts (NFS, CIFS, FUSE) can stall indefinitely. Mitigations:
 
 - `--timeout=N` spawns a watchdog thread that forces process exit
 - Worker result collection uses `recv_timeout(300s)` instead of blocking `recv()`

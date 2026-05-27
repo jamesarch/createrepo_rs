@@ -17,8 +17,7 @@ fn main() {
         .unwrap_or_else(|| "unknown".to_string());
 
     // Build timestamp (ISO 8601)
-    let build_time = chrono_now()
-        .unwrap_or_else(|| "unknown".to_string());
+    let build_time = chrono_now().unwrap_or_else(|| "unknown".to_string());
 
     println!("cargo:rustc-env=GIT_HASH={git_hash}");
     println!("cargo:rustc-env=BUILD_TIME={build_time}");
@@ -33,7 +32,9 @@ fn chrono_now() -> Option<String> {
         .output()
         .ok()?;
     if output.status.success() {
-        String::from_utf8(output.stdout).ok().map(|s| s.trim().to_string())
+        String::from_utf8(output.stdout)
+            .ok()
+            .map(|s| s.trim().to_string())
     } else {
         None
     }

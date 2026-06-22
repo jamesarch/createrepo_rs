@@ -8,8 +8,8 @@ Build-Depends:
  rustc (>= 1.76),
  pkg-config,
 Standards-Version: 4.7.0
-Homepage: https://github.com/jamesarch/createrepo_rs
-Vcs-Git: https://github.com/jamesarch/createrepo_rs.git
+Homepage: https://github.com/artifactx-rs/createrepo_rs
+Vcs-Git: https://github.com/artifactx-rs/createrepo_rs.git
 Rules-Requires-Root: no
 
 Package: createrepo-rs

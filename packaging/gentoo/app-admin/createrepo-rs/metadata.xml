@@ -6,6 +6,6 @@
 		<name>jamesarch</name>
 	</maintainer>
 	<upstream>
-		<remote-id type="github">jamesarch/createrepo_rs</remote-id>
+		<remote-id type="github">artifactx-rs/createrepo_rs</remote-id>
 	</upstream>
 </pkgmetadata>

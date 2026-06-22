@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.76%2B-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
-[![CI](https://github.com/jamesarch/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jamesarch/createrepo_rs/actions)
+[![CI](https://github.com/artifactx-rs/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/artifactx-rs/createrepo_rs/actions)
 [![crates.io](https://img.shields.io/crates/v/createrepo_rs.svg)](https://crates.io/crates/createrepo_rs)
 
 Pure-Rust drop-in for `createrepo_c`. **~4× less memory · zero C dependencies · one static binary · built-in `--dump-manifest`.** Byte-identical output — dnf/yum see an equivalent repo.
@@ -67,11 +67,11 @@ dnf copr enable jamesarch/createrepo-rs && dnf install createrepo-rs
 yay -S createrepo-rs
 
 # Debian / Ubuntu
-curl -LO https://github.com/jamesarch/createrepo_rs/releases/download/v0.1.9/createrepo-rs_0.1.9_amd64.deb
+curl -LO https://github.com/artifactx-rs/createrepo_rs/releases/download/v0.1.9/createrepo-rs_0.1.9_amd64.deb
 dpkg -i createrepo-rs_0.1.9_amd64.deb
 
 # RHEL / CentOS
-curl -LO https://github.com/jamesarch/createrepo_rs/releases/download/v0.1.9/createrepo-rs-0.1.9-1.el9.x86_64.rpm
+curl -LO https://github.com/artifactx-rs/createrepo_rs/releases/download/v0.1.9/createrepo-rs-0.1.9-1.el9.x86_64.rpm
 dnf install createrepo-rs-0.1.9-1.el9.x86_64.rpm
 
 # Docker

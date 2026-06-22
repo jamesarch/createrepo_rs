@@ -5,7 +5,7 @@ Thanks for helping improve `createrepo_rs`.
 ## Development setup
 
 ```bash
-git clone https://github.com/jamesarch/createrepo_rs.git
+git clone https://github.com/artifactx-rs/createrepo_rs.git
 cd createrepo_rs
 cargo build
 cargo test --all-targets

@@ -21,8 +21,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   meta = {
     description = "Pure Rust RPM repository metadata generator — dnf/yum-compatible, zero FFI";
-    homepage = "https://github.com/jamesarch/createrepo_rs";
-    changelog = "https://github.com/jamesarch/createrepo_rs/releases/tag/v${finalAttrs.version}";
+    homepage = "https://github.com/artifactx-rs/createrepo_rs";
+    changelog = "https://github.com/artifactx-rs/createrepo_rs/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.gpl2Plus;
     mainProgram = "createrepo_rs";
     maintainers = with lib.maintainers; [ ];

@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: createrepo_rs
 Upstream-Contact: jamesarch <https://github.com/jamesarch>
-Source: https://github.com/jamesarch/createrepo_rs
+Source: https://github.com/artifactx-rs/createrepo_rs
 
 Files: *
 Copyright: 2025-2026 jamesarch

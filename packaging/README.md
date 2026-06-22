@@ -64,7 +64,7 @@ Users install via: `yay -S createrepo-rs` or `paru -S createrepo-rs`.
 
 ```bash
 # First, calculate SHA256 of the release tarball:
-# curl -sL https://github.com/jamesarch/createrepo_rs/archive/refs/tags/v0.1.8.tar.gz | sha256sum
+# curl -sL https://github.com/artifactx-rs/createrepo_rs/archive/refs/tags/v0.1.8.tar.gz | sha256sum
 # Update the sha256 field in packaging/homebrew/createrepo-rs.rb
 
 # Submit to homebrew-core via PR
@@ -138,7 +138,7 @@ nix build .#createrepo-rs
 # Submit to nixpkgs: PR adding pkgs/tools/package-management/createrepo-rs/
 ```
 
-Users install via: `nix profile install github:jamesarch/createrepo_rs` or from nixpkgs after merge.
+Users install via: `nix profile install github:artifactx-rs/createrepo_rs` or from nixpkgs after merge.
 
 ### Gentoo (P2 — ebuild ready)
 

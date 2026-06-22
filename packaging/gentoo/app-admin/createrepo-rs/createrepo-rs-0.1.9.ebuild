@@ -115,9 +115,9 @@ CRATES="
 inherit cargo
 
 DESCRIPTION="Pure Rust RPM repository metadata generator — dnf/yum-compatible, zero FFI"
-HOMEPAGE="https://github.com/jamesarch/createrepo_rs"
+HOMEPAGE="https://github.com/artifactx-rs/createrepo_rs"
 SRC_URI="
-	https://github.com/jamesarch/createrepo_rs/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz
+	https://github.com/artifactx-rs/createrepo_rs/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz
 	$(cargo_crate_uris)
 "
 

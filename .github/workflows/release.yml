@@ -197,7 +197,7 @@ jobs:
           Priority: optional
           Architecture: amd64
           Maintainer: jamesarch <han.shan@live.cn>
-          Homepage: https://github.com/jamesarch/createrepo_rs
+          Homepage: https://github.com/artifactx-rs/createrepo_rs
           Description: Pure Rust RPM repository metadata generator
            createrepo-rs is a pure Rust implementation of createrepo_c that generates
            RPM repository metadata (repodata). It produces dnf/yum-compatible output
@@ -236,7 +236,7 @@ jobs:
           Release:        1
           Summary:        Pure Rust RPM repository metadata generator
           License:        GPL-2.0-or-later
-          URL:            https://github.com/jamesarch/createrepo_rs
+          URL:            https://github.com/artifactx-rs/createrepo_rs
 
           %description
           createrepo-rs is a pure Rust implementation of createrepo_c that generates
@@ -347,7 +347,7 @@ jobs:
           body: |
             ## Changes in ${{ inputs.tag || github.ref_name }}
 
-            See [commits](https://github.com/jamesarch/createrepo_rs/compare/${{ inputs.tag || github.ref_name }}...main) for full history.
+            See [commits](https://github.com/artifactx-rs/createrepo_rs/compare/${{ inputs.tag || github.ref_name }}...main) for full history.
           files: |
             createrepo_rs-x86_64-unknown-linux-musl
             ${{ env.deb_file }}

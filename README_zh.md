@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.76%2B-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
-[![CI](https://github.com/jamesarch/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jamesarch/createrepo_rs/actions)
+[![CI](https://github.com/artifactx-rs/createrepo_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/artifactx-rs/createrepo_rs/actions)
 [![crates.io](https://img.shields.io/crates/v/createrepo_rs.svg)](https://crates.io/crates/createrepo_rs)
 
 **纯 Rust 编写的 RPM 仓库元数据生成器** — 生成与 dnf / yum 兼容的 repodata（primary.xml、filelists.xml、other.xml、repomd.xml），可直接替代 `createrepo_c`。**内存省 ~4× · 零 C 依赖 · 单一静态二进制 · 内置 `--dump-manifest`。** 输出逐字节一致，dnf/yum 视为等价仓库。
@@ -35,7 +35,7 @@
 cargo install createrepo_rs
 
 # 或从 git 安装
-cargo install --git https://github.com/jamesarch/createrepo_rs createrepo_rs
+cargo install --git https://github.com/artifactx-rs/createrepo_rs createrepo_rs
 
 # --- 发行版软件包 ---
 
@@ -48,11 +48,11 @@ yay -S createrepo-rs
 # 或：paru -S createrepo-rs
 
 # RHEL / CentOS (.rpm 直接下载)
-curl -LO https://github.com/jamesarch/createrepo_rs/releases/download/v0.1.9/createrepo-rs-0.1.9-1.el9.x86_64.rpm
+curl -LO https://github.com/artifactx-rs/createrepo_rs/releases/download/v0.1.9/createrepo-rs-0.1.9-1.el9.x86_64.rpm
 dnf install createrepo-rs-0.1.9-1.el9.x86_64.rpm
 
 # Debian / Ubuntu (.deb)
-curl -LO https://github.com/jamesarch/createrepo_rs/releases/download/v0.1.9/createrepo-rs_0.1.9_amd64.deb
+curl -LO https://github.com/artifactx-rs/createrepo_rs/releases/download/v0.1.9/createrepo-rs_0.1.9_amd64.deb
 dpkg -i createrepo-rs_0.1.9_amd64.deb
 
 # 为 RPM 目录生成元数据

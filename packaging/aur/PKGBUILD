@@ -6,7 +6,7 @@ pkgver=0.1.9
 pkgrel=1
 pkgdesc="Pure Rust RPM repository metadata generator — dnf/yum-compatible, zero FFI, single static binary"
 arch=('x86_64' 'aarch64')
-url="https://github.com/jamesarch/createrepo_rs"
+url="https://github.com/artifactx-rs/createrepo_rs"
 license=('GPL-2.0-or-later')
 makedepends=('cargo' 'rust>=1.76')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")

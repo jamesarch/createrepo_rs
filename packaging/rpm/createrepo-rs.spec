@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        Pure Rust RPM repository metadata generator
 
 License:        GPL-2.0-or-later
-URL:            https://github.com/jamesarch/createrepo_rs
+URL:            https://github.com/artifactx-rs/createrepo_rs
 Source0:        %{url}/releases/download/v%{version}/createrepo-rs-%{version}-vendored.tar.gz
 
 BuildRequires:  cargo
